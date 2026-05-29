@@ -36,6 +36,7 @@ from typing import Optional
 # Steps that require a clean surface before them (RULE_DEP_NO_CLEAN).
 DEPOSITION_STEPS = frozenset({
     "THERMAL OXIDATION",
+    "GATE OXIDE GROWTH",
     "DEPOSIT PAD OXIDE",
     "EPITAXIAL DEPOSITION",
     "DEPOSIT POLYSILICON",
@@ -72,7 +73,6 @@ CLEAN_STEPS = frozenset({
     "CLEAN PAD OPENING", "BACKSIDE ETCH CLEAN", "BACKSIDE RINSE",
     # Thermal steps that create a clean/passivated surface
     "THERMAL OXIDATION",    # grows clean oxide; subsequent poly sees clean SiO2
-    "GATE OXIDE GROWTH",    # same — extension of the thermal oxidation process
     "GATE OXIDE PREP",      # surface conditioning before gate oxide
     "RAPID THERMAL ANNEAL", # high-temp anneal in inert/oxidising atmosphere
     "EPITAXY ANNEAL",       # post-epitaxy anneal; clean atmosphere

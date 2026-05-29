@@ -47,16 +47,24 @@ In vielen industriellen Prozessen lassen sich Abläufe als lange Sequenzen von S
 - **Eval-Setup:** Es steht ein gemeinsames, festes Eval-Set bereit, das von den Veranstaltern verteilt wird. Es umfasst zwei Teilmengen:
   - **Next-Step- und Completion-Aufgaben** (`eval_input_valid.csv`): 600 Einträge – je 100 zurückgehaltene Sequenzen pro Familie, jeweils bei 60 % und 80 % Vervollständigung abgeschnitten.
   - **Anomalieerkennung** (`eval_input_anomaly.csv`): 987 gemischte Sequenzen – 387 mit gezielt injizierten Prozessregelverstößen (nach 10 Regeltypen beschriftet) und 600 gültige Sequenzen, ungeordnet und ohne Labels.
-- **Drei definierte Evaluationsaufgaben:**
+- **Drei Submission-Aufgaben (Teams reichen Ergebnisse ein):**
 
-  | # | Aufgabe | Eingabe | Metrik(en) |
-  |---|---|---|---|
-  | 1 | **Next-Step-Prediction** | Partielle Sequenz | Top-1-Accuracy, Top-3-Accuracy, Top-5-Accuracy, MRR |
-  | 2 | **Sequenzvervollständigung** | Partielle Sequenz (60 % oder 80 %) | Exact Match Rate, Normalized Edit Distance, Token Accuracy, Block-level Accuracy |
-  | 3 | **Anomalieerkennung** | Vollständige Sequenz (mit/ohne Regelverstoß) | Binary Accuracy, Precision, Recall, F1, Confusion Matrix, ROC-AUC, Rule Attribution Accuracy |
-  | 4 | **Generalisierung (Reporting)** | ID- vs. OOD-Split | Performance-Drop ID -> OOD (pro Hauptmetrik) |
+  | #   | Aufgabe                      | Eingabe                                      | Metrik(en)                                                                                   |
+  | --- | ---------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------- |
+  | 1   | **Next-Step-Prediction**     | Partielle Sequenz                            | Top-1-Accuracy, Top-3-Accuracy, Top-5-Accuracy, MRR                                          |
+  | 2   | **Sequenzvervollständigung** | Partielle Sequenz (60 % oder 80 %)           | Exact Match Rate, Normalized Edit Distance, Token Accuracy, Block-level Accuracy             |
+  | 3   | **Anomalieerkennung**        | Vollständige Sequenz (mit/ohne Regelverstoß) | Binary Accuracy, Precision, Recall, F1, Confusion Matrix, ROC-AUC, Rule Attribution Accuracy |
+
+- **Zusätzliches Generalisierungs-Reporting (nur durch Veranstalter, nach Abgabe):**
+
+  | #   | Aufgabe                 | Eingabe                                          | Metrik(en)                                                |
+  | --- | ----------------------- | ------------------------------------------------ | --------------------------------------------------------- |
+  | 4   | **Generalisierung OOD** | ID- vs. OOD-Split auf unbekannter Produktfamilie | Performance-Drop ID → OOD (pro Hauptmetrik aus Tasks 1–3) |
+
+  Teams reichen für Task 4 keine separaten Ergebnisse ein. Die Veranstalter wenden die eingereichten Modelle nach der Abgabe auf den OOD-Datensatz an und berechnen den Performance-Drop.
 
 - **Scoring:** Das Bewertungsskript `eval_metrics.py` ist für alle drei Aufgaben einsatzbereit und benötigt keine externen Abhängigkeiten. Es gibt pro Aufgabe einen detaillierten Report mit Aufschlüsselung nach Familie und Schnittpunkt.
+- **Generalisierung (Task 4):** Die Generalisierungsfähigkeit wird zusätzlich an einer vierten, im Training nicht enthaltenen und nicht kommunizierten Produktfamilie bewertet. Diese Familie ist den Teilnehmenden nicht bekannt und wird ausschließlich nach Abgabe durch die Veranstalter zur Auswertung genutzt. Bewertet wird der Performance-Drop (ID → OOD) über alle Hauptmetriken.
 - **Test-Frequenz:** Sinnvoll sind automatisierte Evaluationsintervalle während des Trainings, um Lernverlauf, Overfitting und Skalierungseffekte sichtbar zu machen. Die konkrete Frequenz definieren die Teams selbst.
 - **Inference-Stack:** Eine UI ist optional. Für Live-Tests reicht bereits ein einfacher Inference-Workflow oder Notebook-basierter Demonstrator. Besonders interessant ist eine direkte Gegenüberstellung von Baseline-Output und trainiertem Modell-Output auf identischen Eingaben.
 - **Visualisierung:** Erwartet werden mindestens Loss-Kurven, Leistungsmetriken über die Zeit und vergleichende Darstellungen zwischen Baseline und trainiertem Modell; weitere Visualisierungen sind willkommen.
@@ -82,5 +90,4 @@ In vielen industriellen Prozessen lassen sich Abläufe als lange Sequenzen von S
 - Qualität von Demo, Visualisierung und Ergebnisaufbereitung
 
 ### 10. Kontakt & Support während des Events
-- Mentor vor Ort: TBD
-- Notfall-Kontakt: TBD
+- Mentor vor Ort: Simeon

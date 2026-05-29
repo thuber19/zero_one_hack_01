@@ -24,6 +24,7 @@ The data covers three semiconductor product families — **MOSFET**, **IGBT**, a
 | `IGBT_variants.csv` | 1,000 valid IGBT process sequences (~148 steps each, 148k rows total) |
 | `IC_variants.csv` | 1,000 valid IC process sequences (~115 steps each, 115k rows total) |
 | `generate_sequences.py` | Script to generate and validate additional sequences |
+| `eval_metrics.py` | Official scoring script — use to self-evaluate your model against all three tasks |
 | `generation_rules.md` | Full grammar reference, forbidden-pattern documentation, and eval protocol |
 
 ---
@@ -106,6 +107,13 @@ Three tasks are scored by the organizers against a fixed ground truth:
 | 3 | **Anomaly detection** | `eval_input_anomaly.csv` — given a full sequence, determine if it is valid or contains a process-rule violation | Binary Accuracy, Precision, Recall, F1, Confusion Matrix, ROC-AUC, Rule Attribution Accuracy |
 
 Submission file formats for all three tasks are documented in `generation_rules.md` (Section 5).
+
+You can self-evaluate your model locally using the provided `eval_metrics.py` script (no external dependencies):
+
+```bash
+# Example: score your anomaly detection output
+python eval_metrics.py --task anomaly --ground-truth <ground_truth.csv> --predictions <your_output.csv>
+```
 
 ---
 
