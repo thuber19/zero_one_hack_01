@@ -8,6 +8,26 @@
 
 ---
 
+### 🎯 Scope-Eingrenzung — BITTE ZUERST LESEN
+
+Es gibt eine harte Scope-Grenze für diesen Track. Der Conversion Coach operiert **nur** auf der Strecke, die Nutzer:innen selbst online abschließen können:
+
+| Im Scope ✅ | Außerhalb des Scope ❌ |
+|---|---|
+| **Privatarzt-Tarife** ("Bei Arztbesuchen" — Start & Optimal) | **Krankenhaus-Tarife** ("Im Krankenhaus" — Krankenhaus/Sonderklasse-Pfad) |
+| **"Ich selbst"** — Versicherung nur für sich selbst | **"Andere Personen"** — Versicherung für andere (routet automatisch zum Berater) |
+| **Online-abschließbare Tarife** (Start & Optimal) | **Beratungspflichtige Tarife** (Opt. Plus & Premium — routet zur Terminbuchung) |
+| **Alle Infos der aktuellen Strecke müssen weiterhin abgefragt werden** — kein Schritt darf entfallen | Berater-Übergabe ist ein gültiger Exit, aber **kein Conversion-Erfolg** für diesen Track |
+| Nutzer:innen, die online abschließen können → Coach hilft ihnen beim Abschluss | Nutzer:innen, die nicht online abschließen können → routen zum Berater (kein weiteres Coaching) |
+
+**Conversion für diesen Track = Online-Abschluss (Start oder Optimal).** Alles, was zum Berater routet, ist außerhalb des Coaching-Scope — es ist ein sauberer Exit, kein Conversion-Gewinn.
+
+Das heißt: Der Krankenhaus-Pfad (Step 5 Zusatzbausteine), der "andere Personen"-Zweig (Step 2) und die Tarife Opt. Plus/Premium sind **explizit aus dem aktiven Interventions-Scope ausgeschlossen**. Nutzer:innen, die diese Pfade wählen, werden zum Berater geroutet und verlassen den Funnel. Der Coach versucht nicht, sie zu retten — er hilft nur Nutzer:innen, die online abschließen *können*, auch tatsächlich abzuschließen.
+
+Alle Informationen, die aktuell im Rechner abgefragt werden, müssen weiterhin erhoben werden — kein Schritt darf aus der In-Scope-Strecke entfernt werden.
+
+---
+
 ### 1. Problem Statement (3–5 Sätze)
 
 Kund:innen kommen mit konkretem Interesse an einer Krankenversicherung auf die UNIQA-Website, durchlaufen einen 15-stufigen Online-Rechner und brechen massenhaft ab — von 1.000 Personen, die starten, schließen am Ende nur etwa 56 online ab (5,6% Conversion Rate). Die Drop-off-Punkte sind bekannt (insbesondere die erstmalige Preisanzeige mit 66% Abbruch und der finale Preis mit 78% Abbruch), die *Gründe* dafür sind es nicht. Heute reagiert die Strecke nicht darauf, ob jemand zögert, vergleicht oder einfach den Preis abklärt — alle bekommen denselben statischen Funnel. Der Hackathon entwickelt einen **Conversion Coach**, der Unsicherheit und Abbruchintention in Echtzeit erkennt und im richtigen Moment passend interveniert, sowie ein **synthetisches Persona-Setup**, mit dem unterschiedliche Nutzerintentionen realistisch simuliert und Interventionen gegeneinander getestet werden können.
@@ -32,8 +52,9 @@ Kund:innen kommen mit konkretem Interesse an einer Krankenversicherung auf die U
 - **Fachlogik:** Wird als gegeben angenommen — der Chatbot kann Produktfragen, Begriffserklärungen und Tarifvergleiche bedienen. Diese Fähigkeit wird im Hackathon nicht neu gebaut.
 - **Conversion Coach (Build-Fokus):**
   - Erkennt Verhaltenssignale wie Inaktivität, Zurücknavigieren, wiederholte Änderungen, ungewöhnlich lange Verweildauer, Hover-Patterns auf Preis-Elementen
-  - Löst kontextbezogene Interventionen aus: vereinfachte Erklärungen, Vertrauenssignale, alternative Formulierungen, Markt-Vergleichshinweise, sanfte Berater-Übergabe
+  - Löst kontextbezogene Interventionen aus: vereinfachte Erklärungen, Vertrauenssignale, alternative Formulierungen, Markt-Vergleichshinweise — **Berater-Übergabe nur als Exit für Out-of-Scope-Pfade** (Krankenhaus, andere Personen, Opt. Plus/Premium), nicht als Coaching-Ziel
   - Ist so ausgelegt, dass unterschiedliche Persona-Typen mit verschiedenen Intentionen systematisch durchgespielt werden können
+  - **Scope-Grenze:** Der Coach coacht nur die Privatarzt/"Ich selbst"/online-abschließbare Strecke. Nutzer:innen auf Krankenhaus-, "andere Personen"- oder Opt. Plus/Premium-Pfaden werden zum Berater geroutet — kein Coaching.
 - **Persona-Setup:** Synthetische Personas mit unterschiedlichen Intentionen (Abschluss, Orientierung, Vergleich, Preis-Check) und Entscheidungslogiken. Die Personas sind nicht nur Testdaten, sondern zentrales Entwicklungsinstrument.
 - **Trainingsmethoden:** Frei wählbar. Naheliegend sind regelbasierte Interventionslogiken, klassische ML-Klassifikatoren für Abbruchwahrscheinlichkeit, LLM-basierte Persona-Bots, RL für Interventions-Timing oder hybride Ansätze.
 - **Constraints:** Reproduzierbarkeit auf Cluster-Infrastruktur, offene und nachvollziehbare Logik statt Black-Box-Empfehlungen. Es ist explizit *kein* reiner LLM-Wrapper-Case — die Coach-Logik muss eine eigenständige technische Komponente sein.
@@ -42,14 +63,14 @@ Kund:innen kommen mit konkretem Interesse an einer Krankenversicherung auf die U
 
 - **Level 1:** Die bestehende Strecke verstehen (Live-Rechner durchlaufen, Streckendoku lesen), die drei bereitgestellten Personas in lauffähige Persona-Bots überführen, eine erste Conversion-Coach-Logik mit klar definierten Trigger-Regeln und Interventionstypen bauen.
 - **Level 2:** Die Logik im Persona-Setup testen, mindestens drei Interventionsvarianten gegeneinander vergleichen, Vorher-/Nachher-Conversion messen, erste Hypothesen formulieren, warum welche Intervention bei welcher Persona wirkt.
-- **Level 3 / Stretch:** Großskalig auf dem Cluster simulieren (tausende Journeys, Persona-Varianten, Timing-Permutationen), neue Abbruchmuster aufdecken, die in den UNIQA-Daten heute nicht sichtbar sind, validierte Hypothesen für die Weiterentwicklung des Coachs in den Echtbetrieb formulieren.
+- **Level 3 / Stretch:** Großskalig auf dem Cluster simulieren (tausende Journeys, Persona-Varianten, Timing-Permutationen), neue Abbruchmuster aufdecken, die in den heutigen UNIQA-Daten heute nicht sichtbar sind, validierte Hypothesen für die Weiterentwicklung des Coachs in den Echtbetrieb formulieren.
 
 ### 6. Daten & Ressourcen
 
 - **Personas:** Drei detaillierte Persona-Profile (Judith / Franz / Peter) liegen als Markdown-Briefings vor, ergänzt durch eine strukturierte `personas.json` mit quantitativen Werten aus der UNIQA-Segmentierungsforschung (Demographie, Versicherungsverhalten, Kaufkriterien, Kanalpräferenz pro CJ-Schritt, Lebensereignis-Trigger). Teams können diese Profile direkt als System-Prompts für Persona-Bots nutzen oder mit eigenen Varianten erweitern. **Hinweis zu Kanaldaten:** `personas.json` enthält `channel_preference_per_journey_step_pct_dominant_channel` — den präferierten Hauptkanal pro Schritt mit seinem Prozentwert (z.B. Beratung: via Berater 90%). Die vollständige 3-Kanal-Aufschlüsselung (Online / Berater / Kundenservice pro Schritt) ist nur für Segment 1 im Original-Segmentierungsbooklet verfügbar und wurde für diesen Datensatz nicht transkribiert. Teams, die Sekundärkanal-Verteilungen benötigen, sollten diese aus dem Dominanzwert und den Segment-Verhaltensmustern ableiten.
 - **Segment-Verteilung im Online-Funnel:** Geschätzt 50% Segment 2 (Online-Affine), 30% Segment 1 (Aufsteigende Hybriden), 20% Segment 3 (Kundenservice-Affine). Quelle: UNIQA-interne Einschätzung, kein hartes Tracking.
-- **Streckendokumentation:** Eine begleitende Markdown-Doku beschreibt die 15-stufige UNIQA-KV-Strecke mit den vier sichtbaren Phasen (Angaben → Produkt → Empfehlung → Abschluss), den bekannten Drop-off-Steps und den UI-Elementen. Wichtig zu verstehen: Der Rechner ist kein reiner Sales-Funnel, sondern auch ein Beratungs-Routing-Werkzeug — die Tarife "Opt. Plus" und "Premium" sowie alle Krankenhaus-Pfade führen automatisch in eine Terminbuchung statt einen Online-Abschluss.
-- **Produktdaten KV:** Vier Tarife (Start / Optimal / Opt. Plus / Premium) mit voraussichtlichen Prämien zwischen 38,74 € und 140,16 €/Monat, dazu Rückerstattungs-Höchstbeträge je Leistungsbereich (Arztleistungen, Medikamente, Therapeutische Behandlungen, Heilbehelfe, refraktive Augen-OP). Die Daten sind öffentlich auf [uniqa.at/rechner/krankenversicherung](https://www.uniqa.at/rechner/krankenversicherung/) einsehbar und dürfen für die Simulation verwendet sowie synthetisch ergänzt werden.
+- **Streckendokumentation:** Eine begleitende Markdown-Doku beschreibt die 15-stufige UNIQA-KV-Strecke mit den vier sichtbaren Phasen (Angaben → Produkt → Empfehlung → Abschluss), den bekannten Drop-off-Steps und den UI-Elementen. **Wichtig:** Nur die Privatarzt/"Ich selbst"/online-abschließbare Strecke ist Coaching-Scope. Der Krankenhaus-Pfad, der "andere Personen"-Zweig und die Tarife Opt. Plus/Premium führen automatisch in eine Terminbuchung und sind **außerhalb des aktiven Coaching-Scope**. Sie werden im Rechner weiterhin angeboten, der Coach versucht aber nicht, Nutzer:innen auf diesen Pfaden zu halten — sie werden zum Berater geroutet.
+- **Produktdaten KV:** Vier Tarife (Start / Optimal / Opt. Plus / Premium) mit voraussichtlichen Prämien zwischen 38,74 € und 140,16 €/Monat, dazu Rückerstattungs-Höchstbeträge je Leistungsbereich (Arztleistungen, Medikamente, Therapeutische Behandlungen, Heilbehelfe, refraktive Augen-OP). **Im Scope für Coaching sind nur Start (€38,74) und Optimal (€68,14)** — die beiden online-abschließbaren Privatarzt-Tarife. Opt. Plus und Premium sind zur Simulation als Auswahloption relevant (Nutzer:innen können sie klicken → Coach routet zum Berater), aber nicht als Conversion-Ziel. Die Daten sind öffentlich auf [uniqa.at/rechner/krankenversicherung](https://www.uniqa.at/rechner/krankenversicherung/) einsehbar und dürfen für die Simulation verwendet sowie synthetisch ergänzt werden.
 - **Drop-off-Daten (real):** Aus der UNIQA-Funnel-Analyse (10.12.2025–01.02.2026):
 
   | Step | Was passiert | Drop-off |
@@ -67,7 +88,7 @@ Kund:innen kommen mit konkretem Interesse an einer Krankenversicherung auf die U
 
 ### 7. Evaluation & Benchmarking
 
-- **Eval-Setup:** Jedes Team misst die Wirkung des Conversion Coachs gegen eine klar definierte Baseline (Strecke ohne Coach, gleiche Persona-Set, gleiche Anzahl Durchläufe). Die Conversion ist nicht nur "Online-Abschluss" — eine smooth eingefädelte Beratungs-Übergabe zählt ebenfalls als positiver Outcome, weil das für UNIQA ein qualifizierter Lead ist.
+- **Eval-Setup:** Jedes Team misst die Wirkung des Conversion Coachs gegen eine klar definierte Baseline (Strecke ohne Coach, gleiche Persona-Set, gleiche Anzahl Durchläufe). **Conversion für diesen Track = Online-Abschluss (Start oder Optimal).** Eine Berater-Übergabe ist ein gültiger Exit-Pfad für Out-of-Scope-Nutzer:innen (Krankenhaus, andere Personen, Opt. Plus/Premium), zählt aber **nicht** als Conversion-Erfolg für das Coaching-Ziel. Das Coaching-Ziel ist: Nutzer:innen, die online abschließen *können*, auch tatsächlich zum Abschluss bringen.
 - **Drei zentrale Auswertungsdimensionen:**
 
   | # | Dimension | Was gemessen wird | Metrik(en) |
@@ -83,15 +104,16 @@ Kund:innen kommen mit konkretem Interesse an einer Krankenversicherung auf die U
 **Beispiel für Demonstrator-Outputs:**
 
 - **Ohne Coach (Persona Franz, Segment 2 — Online-Affin):** Sieht erste Preisanzeige bei Tarifauswahl, vergleicht 4 Tarife, klickt einmal Premium ("nur nach Beratung"), klickt zurück, schließt den Tab → Abbruch.
-- **Mit Coach (Persona Franz, gleiche Situation):** Coach erkennt das Rückwärtsnavigieren bei Premium-Tarif, blendet eine Erklärung ein ("Premium-Tarif erfordert kurzes Beratungsgespräch, Online-Abschluss ist mit Optimal jederzeit möglich"), zeigt einen Marktvergleich für Optimal → Franz wählt Optimal und konvertiert.
+- **Mit Coach (Persona Franz, gleiche Situation):** Coach erkennt das Rückwärtsnavigieren bei Premium-Tarif, blendet eine Erklärung ein ("Premium-Tarif erfordert kurzes Beratungsgespräch, Online-Abschluss ist mit Optimal jederzeit möglich"), zeigt einen Marktvergleich für Optimal → Franz wählt Optimal und konvertiert **online** → ✅ Conversion-Erfolg.
 - **Ohne Coach (Persona Judith, Segment 1 — Aufsteigende Hybride):** Sieht Finalpreis nach Gesundheitsfragen, der höher ist als der initial gezeigte Preis, bricht ab.
-- **Mit Coach (gleiche Situation):** Coach erkennt langes Verweilen auf der Finalpreis-Seite plus Hover auf "Abbrechen", erklärt transparent warum der Preis sich verändert hat, bietet eine smooth eingefädelte Beratungs-Übergabe an → qualifizierter Lead statt Lost Customer.
+- **Mit Coach (gleiche Situation):** Coach erkennt langes Verweilen auf der Finalpreis-Seite plus Hover auf "Abbrechen", erklärt transparent warum der Preis sich verändert hat, unterstützt Judith beim Online-Abschluss → ✅ Conversion-Erfolg.
+- **Out-of-Scope-Beispiel (Persona wählt Krankenhaus oder andere Personen):** Coach erkennt die Pfadwahl, routet sauber zum Berater → kein Coaching, kein Conversion-Erfolg für diesen Track, aber korrekter Exit.
 
 ### 8. Technische Hinweise
 
 - **Vorgeschlagener Tech Stack:** Python für Simulation und Eval, ein LLM-Framework freier Wahl (OpenAI/Anthropic/lokal) für die Persona-Bots, optional ein lightweightes Frontend (Streamlit, Gradio) für die Live-Demo. Persona-Bots brauchen keinen aufwändigen Stack — gute Prompts schlagen schwere Architektur.
-- **Pflicht-Discovery (erste 30 Minuten):** Jedes Team durchläuft den echten Live-Rechner unter [uniqa.at/rechner/krankenversicherung](https://www.uniqa.at/rechner/krankenversicherung/). Persönliche Erfahrung mit den Schmerzpunkten schlägt jede Doku.
-- **Bekannte Stolpersteine:** Persona-Bots werden zu generisch wenn die Prompts zu kurz sind (nutzt die bereitgestellten Briefings vollständig), Interventions-Trigger feuern zu oft und werden nervig, die Versuchung ist groß zu viel auf einmal zu bauen statt eine Achse sauber zu validieren, faire Baseline-Vergleiche brauchen identische Persona-Seeds.
+- **Pflicht-Discovery (erste 30 Minuten):** Jedes Team durchläuft den echten Live-Rechner unter [uniqa.at/rechner/krankenversicherung](https://www.uniqa.at/rechner/krankenversicherung/) — aber **nur den Privatarzt/"Ich selbst"-Pfad**. Der Krankenhaus-Pfad und der "andere Personen"-Zweig sind außerhalb des Scope und müssen nicht im Detail durchlaufen werden.
+- **Bekannte Stolpersteine:** Persona-Bots werden zu generisch wenn die Prompts zu kurz sind (nutzt die bereitgestellten Briefings vollständig), Interventions-Trigger feuern zu oft und werden nervig, die Versuchung ist groß zu viel auf einmal zu bauen statt eine Achse sauber zu validieren, faire Baseline-Vergleiche brauchen identische Persona-Seeds. **Scope-Stolperstein:** Nicht versuchen, den Krankenhaus-Pfad oder die "andere Personen"-Strecke zu coachen — diese sind außerhalb des Scope.
 - **Bekannte Baseline:** ~5,6% Online-Conversion auf der echten Strecke; 66% Drop-off bei Erstpreis und 78% bei Finalpreis sind die zwei Ziele. Eine Coach-Logik, die diese Drop-offs sichtbar reduziert (auch nur bei einer Persona-Gruppe), ist bereits ein starkes Ergebnis.
 
 ### 9. Bewertungskriterien (track-spezifisch)

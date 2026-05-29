@@ -2,7 +2,7 @@
 
 **36 hours. Real infrastructure. European AI sovereignty.**
 
-Welcome to the central repository for Zero One Hack_01, hosted by [Lumos Consulting](https://lumos-consulting.at) at [AI Factory Austria](https://aifactory.at) in Vienna, with compute provided by [CINECA](CINECA) on the Leonardo GPU Cluster.
+Welcome to the central repository for Zero One Hack_01, hosted by [Lumos Consulting](https://lumos-consulting.at) at [AI Factory Austria](https://aifactory.at) in Vienna, with compute provided by CINECA on the Leonardo GPU Cluster.
 
 ---
 

@@ -11,6 +11,26 @@ Build a **Conversion Coach** that detects when users are about to abandon UNIQA'
 
 ---
 
+## 🎯 Scope Constraint — READ THIS
+
+There is a hard scope boundary for this track. The Conversion Coach operates **only** on the path users can complete online themselves:
+
+| In Scope ✅ | Out of Scope ❌ |
+|---|---|
+| **Privatarzt tariffs** ("Bei Arztbesuchen" — Start & Optimal) | **Krankenhaus tariffs** ("Im Krankenhaus" — hospital/Sonderklasse path) |
+| **"Ich selbst"** — insurance for yourself only | **"Andere Personen"** — insurance for others (routes to advisor) |
+| **Online-purchasable tariffs** (Start & Optimal) | **Advisor-required tariffs** (Opt. Plus & Premium — routes to appointment booking) |
+| **All information currently collected in the calculator** must still be collected | Advisor handoff is a valid exit route but **not counted as conversion** for this track |
+| Users who can complete online → help them convert | Users who can't → route them to advisor (no further coaching) |
+
+**Conversion for this track = online purchase completion (Start or Optimal tariff).** Anything that routes to an advisor is outside the coaching scope — it's a clean handoff, not a conversion win.
+
+This means: the Krankenhaus path (Step 5 add-ons), the "andere Personen" branch (Step 2), and Opt. Plus/Premium tariffs are **explicitly excluded** from the Coach's active intervention scope. Users selecting these are routed to an advisor and exit the funnel. The Coach does not try to save them — it only helps users who *can* complete online actually complete.
+
+All information currently asked in the calculator must still be collected — no steps may be removed from the in-scope path.
+
+---
+
 ## Reading Order
 
 | Order | File | What you get | Time |
@@ -76,25 +96,29 @@ These are the numbers you'll reference all weekend. Memorize them.
 | NPS | +17 | +1 | **–6** |
 | KV purchase intent 3y | 18% | 16% | 13% |
 | Primary drop-off step | Initial price | **Final price** | Early — before price |
-| Conversion = | Online purchase OR advisor handoff | Online purchase only | Service contact / callback |
+| Conversion = (in scope) | **Online purchase only** | **Online purchase only** | **Online purchase only** |
+| Out-of-scope exit | Advisor handoff | Advisor handoff | Advisor handoff |
 | Coach must NOT | Push online-only | **Push advisor** | Push self-service |
 
-**The product:**
-- 4 tariffs: Start (€38.74) / Optimal (€68.14) / Opt. Plus (€96.66) / Premium (€140.16)
-- Start + Optimal: online purchase possible
-- Opt. Plus + Premium: advisory required → routes to appointment booking, not online checkout
+**The product (⚠️ only Start & Optimal are in scope for coaching):**
+- 4 tariffs exist, but only **2 are online-purchasable** → Start (€38.74) / Optimal (€68.14)
+- Opt. Plus (€96.66) + Premium (€140.16): advisory required → routes out of scope to appointment booking
+- Krankenhaus (hospital) path: also routes to advisor, not online-purchasable
+- "Andere Personen" (insurance for others): also routes to advisor, not online-purchasable
 - ~80% of traffic arrives via paid/organic search
+- **All calculator steps must still be collected — no simplification of the data-gathering flow**
 
 ---
 
-## What "Conversion" Means (Important)
+## What "Conversion" Means (Important — Scoped)
 
-This is not a standard e-commerce funnel. Conversion has **two definitions** depending on the persona:
+For this track, **conversion = online purchase only.** Completing the calculator and signing up online for a Start or Optimal tariff.
 
-1. **Online purchase** — completing the calculator and signing up online (Start / Optimal tariffs only)
-2. **Qualified advisor lead** — the user is smoothly handed off to an advisor (booked call, callback request, service contact)
+Advisor handoffs (for Krankenhaus, andere Personen, Opt. Plus/Premium) are a **valid exit route** but **do not count as conversion for this track.** The Coach routes those users away cleanly — it does not coach them.
 
-For the 5.6% baseline, only definition 1 counts. For the Coach evaluation, **both count**. This matters most for Peter (S3) — his "conversion" is almost certainly a service contact, not an online purchase.
+The 5.6% baseline already reflects online-only completions. The Coach's goal is to increase that number by helping users who *can* complete online actually complete, not by routing more people to advisors.
+
+> **Note:** In the broader UNIQA context, advisor handoffs are a valid business outcome. For this hackathon track, we focus exclusively on the online-purchasable path to keep the problem scope tight.
 
 ---
 
@@ -171,12 +195,12 @@ These are documented unknowns, not oversights. Teams should flag them in their r
 
 | Gap | Impact | What to do |
 |---|---|---|
-| No drop-off data for advisor-booking sub-funnel (Steps 8–11) | Medium — this path counts as conversion for S1 & S3 | Assume uniform drop-off per step as default prior |
+| No drop-off data for advisor-booking sub-funnel (Steps 8–11) | **Out of scope** — advisor path is not coached, only routed | Not needed — not part of coaching scope |
 | Step 6 (health questions) not fully documented | Medium — sits between two biggest drop-offs | Walk through live calculator to capture |
 | Step 12+ (online closing) not fully documented | Low — affects final conversion math only | Walk through live calculator to capture |
 | No distribution of price delta (initial vs. final price) | High — the gap drives the 78% drop-off | Use synthetic assumptions; document them |
 | Channel data shows only dominant channel per step, not full 3-way split | Medium — limits multi-channel simulation | Estimate secondary channels from dominant value and segment profile |
-| Krankenhaus (hospital) path after Step 5 undocumented | Low — most Coach work targets Privatarzt path | Note in report if simulated |
+| Krankenhaus (hospital) path after Step 5 | **Out of scope** — Krankenhaus path routes to advisor, Coach does not intervene here | Not simulated — routes to advisor exit |
 
 ---
 
