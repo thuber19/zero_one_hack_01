@@ -16,6 +16,13 @@ and outputs stay EXACT (the grader scores exact tokens) — only the loss is gro
 Public API:
     SYNONYM_GROUPS : list[frozenset[str]]
     group_of(step) -> frozenset[str]   (the step's group, or {step})
+
+Relationship to the teammates' `solution/procseq/canon.py`: that is an INDEPENDENT,
+hand-maintained synonym->canonical map used only inside procseq's own
+canonicalization (default OFF, PROCSEQ_CANON=0). It shares NO call site with this
+module. This file is generator-DERIVED (parsed from the actual rng.choice lists)
+and is used only by our `--synonym-collapse` training loss. They need not be
+identical; both are internally consistent for their own layer.
 """
 from __future__ import annotations
 

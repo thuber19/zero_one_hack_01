@@ -30,6 +30,19 @@ pipeline (unchanged, on `main`). Layer B is this fork's value-add — it is
 *model-agnostic*, so it composes with Layer A's decoder/encoder outputs **or**
 with the simpler transformer in `src/`. Nothing in Layer B replaces Layer A.
 
+### The seam is real and tested (not just claimed)
+- **A → B (categories):** `solution/procseq/external.py` imports
+  `physics.ontology.classify_step` + `STEP_CATEGORY` (with a safe identity
+  fallback). Verified live: `CATEGORIZER_AVAILABLE=True`, procseq's 200-step vocab
+  == our `known_vocab`, procseq's `RULE_IDS` == our 10 rules.
+- **B over A (refine outputs):** `physics_postprocess.py` takes **any** model's
+  `submissions/` (procseq's or ours) + the eval inputs and emits
+  physics-refined CSVs — Task-1 re-ranked legal-first, Task-2 repaired to
+  guaranteed-valid, Task-3 re-decided by the verified engine. Tested end-to-end on
+  a synthetic procseq-style submission (invalid completion → repaired valid;
+  illegal Top-1 → legal; anomaly → exact rule).
+  Run: `python physics_postprocess.py --submission-dir <out>/submissions --eval-dir data`
+
 ## Which is "the submission"?
 The **team's `solution/procseq`** models are the primary learned artifact (run on
 Leonardo via `jobs/run.sh`, options 7/8). This fork **adds** the verification +
