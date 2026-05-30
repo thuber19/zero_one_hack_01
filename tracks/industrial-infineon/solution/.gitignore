@@ -19,3 +19,4 @@ build_workflow.js
 *.db
 agentdb.*
 ruvector.db
+configs/_run_*.yaml

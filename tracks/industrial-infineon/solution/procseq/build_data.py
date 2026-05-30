@@ -6,7 +6,9 @@ from procseq import data, make_eval
 from procseq.tokenizer import build_tokenizer, DEFAULT_DIR
 from procseq.grammar import FAMILIES, write_csv
 
-ART = Path(__file__).resolve().parents[1] / "artifacts"
+import os
+ART = Path(os.environ.get("PROCSEQ_ARTIFACTS",
+                          Path(__file__).resolve().parents[1] / "artifacts"))
 
 def run(n_per_family: int, seed: int, smoke: bool):
     ART.mkdir(exist_ok=True)
