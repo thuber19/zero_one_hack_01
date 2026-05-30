@@ -26,10 +26,11 @@ matplotlib = ">=3.8"
 #   pixi run -e procseq python -m procseq....   (jobs/run.sh options 7/8 do this)
 # ---------------------------------------------------------------------------
 [feature.procseq.pypi-dependencies]
+torch = "==2.3.1"
 transformers = ">=4.44,<5"
 accelerate = ">=0.33"
 pyyaml = ">=6.0"
 tensorboard = "*"
 
 [environments]
-procseq = ["procseq"]
+procseq = { features = ["procseq"] }
