@@ -151,6 +151,13 @@ class EventClass:
     unknown_categories: frozenset = frozenset()
     unknown_flags: tuple = ()
     unknown_union: tuple = ()
+    # OOD-only AND-keyword groups: an UNKNOWN (4th-family) step matches if, for
+    # any group, ALL substrings in the group appear in the step name. Used for
+    # operations whose physical category alone is ambiguous (pad-window opening,
+    # backside metal, electrical probe) so their ordering rules still fire on
+    # renamed steps. Groups are intentionally specific to avoid false positives
+    # (e.g. ('PAD','OPEN') will NOT match 'DEPOSIT PAD OXIDE').
+    unknown_keywords: tuple = ()
 
 
 EVENT_CLASSES: dict[str, EventClass] = {
@@ -163,7 +170,8 @@ EVENT_CLASSES: dict[str, EventClass] = {
         known_steps=_ETCH, unknown_categories=frozenset({CAT_ETCH})),
     "METAL_ETCH": EventClass(
         "METAL_ETCH", "Patterns the metal interconnect (needs full lithography).",
-        known_steps=frozenset({"METAL ETCH", "METAL ETCH DRY"})),
+        known_steps=frozenset({"METAL ETCH", "METAL ETCH DRY"}),
+        unknown_keywords=(("METAL", "ETCH"),)),
     "IMPLANT": EventClass(
         "IMPLANT", "Drives dopant ions into the substrate.",
         known_steps=_IMPLANT, unknown_categories=frozenset({CAT_IMPLANT})),
@@ -172,17 +180,22 @@ EVENT_CLASSES: dict[str, EventClass] = {
         known_steps=_CMP, unknown_categories=frozenset({CAT_CMP})),
     "PAD_WINDOW_OPEN": EventClass(
         "PAD_WINDOW_OPEN", "Opens a window to the bond pads through passivation.",
-        known_steps=_PADS),
+        known_steps=_PADS,
+        unknown_keywords=(("PAD", "OPEN"), ("PAD", "WINDOW"), ("BOND", "PAD"))),
     "ELECTRICAL_TEST": EventClass(
         "ELECTRICAL_TEST", "Probe-based electrical characterisation.",
-        known_steps=_ETESTS),
+        known_steps=_ETESTS,
+        unknown_categories=frozenset({"TEST"}),
+        unknown_keywords=(("PROBE",),)),
     "SHIP": EventClass(
         "SHIP", "Releases the lot to the customer.",
         known_steps=frozenset({"SHIP LOT"}),
         prefixes=("SHIP", "DISPATCH")),   # OOD: no other step starts with these
     "BACKSIDE_METAL": EventClass(
         "BACKSIDE_METAL", "Deposits the backside metal contact.",
-        known_steps=frozenset({"DEPOSIT BACKSIDE METAL"})),
+        known_steps=frozenset({"DEPOSIT BACKSIDE METAL"}),
+        unknown_keywords=(("BACKSIDE", "METAL"), ("REAR", "METAL"),
+                          ("BACKSIDE", "CONTACT"), ("REAR", "CONTACT"))),
 
     # ── Enablers (operations that satisfy a precondition) ────────────────────
     "CLEAN_SURFACE": EventClass(
@@ -217,6 +230,9 @@ def step_in_event(step: str, event_name: str) -> bool:
     # UNKNOWN (4th-family) step → physical reasoning
     if classify_step(step) in ec.unknown_categories:
         return True
+    for grp in ec.unknown_keywords:
+        if all(k in up for k in grp):
+            return True
     if ec.unknown_flags:
         pv = step_physics_vector(step)
         if any(pv.get(f) for f in ec.unknown_flags):

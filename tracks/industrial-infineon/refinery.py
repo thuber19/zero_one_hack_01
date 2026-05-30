@@ -208,31 +208,41 @@ class PhysicsRefinery:
     ) -> list[str]:
         """
         Extend `prefix` to completion. At each step the model proposes a ranked
-        candidate set; the first physically-legal one is chosen. If none is
-        legal the top proposal is taken (so we never stall). Stops at SHIP LOT,
-        on a detected loop, or at max_steps — appending a minimal valid terminal
-        tail if needed. Returns the COMPLETION ONLY (steps after the prefix).
+        candidate set; the first physically-LEGAL one (scanning the full ranking,
+        model order preserved) is chosen.
+
+        VALIDITY GUARANTEE: we NEVER append a step that would create a violation.
+        If the model proposes no legal continuation, we try to terminate legally
+        (sort-test then ship, each only if legal); if even that is impossible we
+        STOP and return the valid partial completion (honest fallback — better an
+        incomplete-but-valid route than a "complete" illegal one, since the score
+        is P(valid)). A final guard trims any trailing step that would leave the
+        whole route invalid, so the returned COMPLETION never introduces a
+        rule violation relative to a valid prefix.
+
+        Returns the COMPLETION ONLY (steps after the prefix).
         """
         state = self.replay(prefix)
         current = list(prefix)
         generated: list[str] = []
         terminated = bool(current) and current[-1].upper() == _TERMINAL
 
+        def _legal(st, step):
+            ns, viol = apply_step(copy(st), step)
+            return ns if not viol else None
+
         while len(generated) < max_steps and not terminated:
             ranked = _ranked(score_fn(current))
             if not ranked:
                 break
-
-            chosen = None
-            chosen_state = None
-            for cand in ranked[:beam]:
-                test_state, viol = apply_step(copy(state), cand)
-                if not viol:
-                    chosen, chosen_state = cand, test_state
+            chosen = chosen_state = None
+            for cand in ranked:                      # full ranking, not just beam
+                ns = _legal(state, cand)
+                if ns is not None:
+                    chosen, chosen_state = cand, ns
                     break
             if chosen is None:
-                chosen = ranked[0]
-                chosen_state, _ = apply_step(copy(state), chosen)
+                break                                # no legal proposal -> stop (don't emit illegal)
 
             current.append(chosen)
             generated.append(chosen)
@@ -244,11 +254,23 @@ class PhysicsRefinery:
             if _looks_stuck(generated):
                 break
 
+        # Legal termination only: add sort-test / ship iff each keeps the route valid.
         if not terminated:
-            if not any(s.upper() == "WAFER SORT TEST" for s in current):
-                generated.append("WAFER SORT TEST")
-            if not generated or generated[-1].upper() != _TERMINAL:
-                generated.append(_TERMINAL)
+            for tail in ("WAFER SORT TEST", _TERMINAL):
+                if tail == "WAFER SORT TEST" and any(s.upper() == tail for s in current):
+                    continue
+                ns = _legal(state, tail)
+                if ns is not None:
+                    current.append(tail)
+                    generated.append(tail)
+                    state = ns
+                    if tail.upper() == _TERMINAL:
+                        terminated = True
+
+        # Final guarantee: trim any trailing step that leaves the whole route invalid.
+        while generated and not self.guard(current)[0]:
+            current.pop()
+            generated.pop()
         return generated
 
     # ── Task 3 / safety: guard ──────────────────────────────────────────────────

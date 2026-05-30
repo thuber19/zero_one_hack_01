@@ -19,6 +19,7 @@ import json
 import os
 import sys
 import random
+import zlib
 from pathlib import Path
 from collections import defaultdict
 
@@ -83,7 +84,10 @@ def create_self_eval_set(
 
     for family in ["mosfet", "igbt", "ic"]:
         # Generate fresh sequences (different seed than training)
-        seqs = generate_dataset(family, n_per_family, seed=seed + hash(family) % 10000, validate=True)
+        # zlib.crc32 is STABLE across processes; Python's built-in hash() is
+        # salted per-run (PYTHONHASHSEED) and would make --seed non-reproducible.
+        seqs = generate_dataset(family, n_per_family,
+                                seed=seed + zlib.crc32(family.encode()) % 10000, validate=True)
 
         for seq in seqs:
             # Task 1 & 2: partial sequences at 60% and 80%
@@ -249,15 +253,17 @@ def compute_completion_metrics(predictions: list[dict], ground_truth: list[dict]
         max_len = max(len(pred_steps), len(true_remaining), 1)
         edit_distances.append(ed / max_len)
 
-        # Token accuracy (position-wise)
+        # Token accuracy (position-wise). Denominator is max(len(pred),len(true))
+        # so OVER-GENERATION is penalised (extra predicted steps beyond the true
+        # length count as misses) — otherwise a model could pad junk for free.
         matches = sum(1 for a, b in zip(pred_steps, true_remaining) if a == b)
-        token_accuracies.append(matches / max(len(true_remaining), 1))
+        token_accuracies.append(matches / max(len(true_remaining), len(pred_steps), 1))
 
         # Block-level accuracy: position-wise match on the category ("block")
-        # sequence (consecutive duplicates collapsed).
+        # sequence (consecutive duplicates collapsed); same over-generation guard.
         tb, pb = _block_seq(true_remaining), _block_seq(pred_steps)
         bm = sum(1 for a, b in zip(pb, tb) if a == b)
-        block_accuracies.append(bm / max(len(tb), 1))
+        block_accuracies.append(bm / max(len(tb), len(pb), 1))
 
     n = max(total, 1)
     return {
@@ -405,8 +411,10 @@ def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cp
     print(f"  Block-level Accuracy:      {task2_metrics['block_accuracy']:.4f}")
 
     # ── Task 3: Anomaly detection ──
-    print("\n--- Task 3: Anomaly detection ---")
+    print("\n--- Task 3: Anomaly detection (PRODUCTION = rule engine) ---")
     task3_preds = []
+    model_loss_valid, model_loss_invalid = [], []   # MODEL-ONLY signal, by truth
+    rfv_valid, rfv_invalid = [], []
     for row in anomaly_rows:
         sequence = row["SEQUENCE"].split("|")
         family = row["FAMILY"].lower()
@@ -417,6 +425,14 @@ def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cp
             "SCORE": result["score"],
             "PREDICTED_RULE": result["predicted_rule"],
         })
+        # capture the MODEL-ONLY signals (transformer per-token loss, RF
+        # violation count) bucketed by the TRUE label, for an honest readout.
+        if row["_is_valid"]:
+            model_loss_valid.append(result["avg_loss"])
+            rfv_valid.append(result["n_rf_violations"])
+        else:
+            model_loss_invalid.append(result["avg_loss"])
+            rfv_invalid.append(result["n_rf_violations"])
 
     task3_metrics = compute_anomaly_metrics(task3_preds, anomaly_rows)
     print(f"  Binary Accuracy:           {task3_metrics['binary_accuracy']:.4f}")
@@ -426,6 +442,26 @@ def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cp
     print(f"  Rule Attribution Accuracy: {task3_metrics['rule_attribution_accuracy']:.4f}")
     if task3_metrics.get("roc_auc") is not None:
         print(f"  ROC-AUC:                   {task3_metrics['roc_auc']:.4f}")
+    print("  NOTE: the production decision above is the deterministic rule engine,")
+    print("  which on in-vocabulary sequences is the reference checker — so these")
+    print("  numbers reflect RULE-ENGINE correctness, NOT what the neural model")
+    print("  learned. The model's STANDALONE discrimination is reported next.")
+
+    # ── HONEST model-only signal: what can the transformer/RF discriminate
+    #    WITHOUT the rule engine? (avg per-token loss; higher = more anomalous) ──
+    print("\n--- Task 3: MODEL-ONLY signal (no physics; honest model skill) ---")
+    # AUC with the anomaly score = transformer avg loss (invalid should score higher)
+    model_auc = _roc_auc(model_loss_invalid, model_loss_valid)  # pos=invalid, neg=valid
+    rf_auc = _roc_auc(rfv_invalid, rfv_valid)
+    def _mean(x): return sum(x) / len(x) if x else float("nan")
+    print(f"  transformer loss  valid={_mean(model_loss_valid):.3f}  "
+          f"invalid={_mean(model_loss_invalid):.3f}  -> ROC-AUC={model_auc if model_auc is None else round(model_auc,4)}")
+    print(f"  RF #violations    valid={_mean(rfv_valid):.3f}  "
+          f"invalid={_mean(rfv_invalid):.3f}  -> ROC-AUC={rf_auc if rf_auc is None else round(rf_auc,4)}")
+    print("  (This is the model's UNAIDED anomaly skill on in-vocab data; expect it")
+    print("   to be well below 1.0 — the rule engine is what makes production exact.)")
+    task3_metrics["model_only_loss_auc"] = model_auc
+    task3_metrics["model_only_rf_auc"] = rf_auc
 
     # ── Per-family breakdown (spec requires it) ──
     print("\n--- Per-family breakdown ---")

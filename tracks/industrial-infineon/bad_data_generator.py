@@ -345,10 +345,26 @@ def _hard_negative_traps(seq, S, rng):
     the boundary cases a naive detector tends to flag. The caller verifies each
     is genuinely valid before keeping it.
     """
+    from generate_sequences import DEPOSITION_STEPS, CLEAN_STEPS
     traps = []
     # 1. the unmodified valid sequence (consecutive deposits + implants already
     #    occur naturally in via-fill and IGBT cycle 3)
     traps.append(("baseline_valid", list(seq)))
+    # 2. consecutive deposition: duplicate a deposition in place. The clean is
+    #    still inside its window, so this MUST stay valid — it traps a detector
+    #    that naively flags back-to-back depositions.
+    for i, s in enumerate(seq):
+        if s in DEPOSITION_STEPS:
+            traps.append(("consecutive_deposit", seq[:i + 1] + [s] + seq[i + 1:]))
+            break
+    # 3. redundant clean immediately before a deposition (extra clean, still
+    #    valid) — traps a detector that flags "too many cleans".
+    for i, s in enumerate(seq):
+        if s in CLEAN_STEPS:
+            traps.append(("redundant_clean", seq[:i] + [s] + seq[i:]))
+            break
+    # The caller verifies each candidate is genuinely valid before keeping it,
+    # so any mutation that accidentally becomes invalid is simply dropped.
     return traps
 
 

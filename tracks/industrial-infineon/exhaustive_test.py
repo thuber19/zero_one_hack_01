@@ -301,12 +301,17 @@ def test_ood(rep: Report):
             _violated(ship_first, "RULE_SHIP_BEFORE_TEST"))
 
     # Scale OOD: hundreds of synthetic novel-vocabulary families.
+    # CAVEAT (honest): pseudo_valid families are generated to be category-valid
+    # and so "0 false positives" here is partly by construction (the engine that
+    # defines validity also accepts them) — it is a CONSISTENCY check that the
+    # renamer preserves validity, NOT independent proof. The injected-violation
+    # sub-check below IS independent (a fresh mutation the engine must catch).
     import pseudo_family as PF
     import random as _r
     rng = _r.Random(5)
     pseudo = PF.generate_pseudo_valid(400, rng)
     fp = sum(1 for _tag, s in pseudo if engine(s))
-    rep.add("OOD pseudo-families: 0 false positives",
+    rep.add("OOD pseudo-families: 0 false positives (consistency check)",
             fp == 0, f"{fp} FP / {len(pseudo)}")
     novel = set()
     for _tag, s in pseudo:

@@ -108,10 +108,12 @@ class ProcessTransformer(nn.Module):
         x = self.token_emb(input_ids) + self.pos_emb(positions)
         x = self.drop(x)
 
-        # Causal mask: prevent attending to future tokens
-        causal_mask = nn.Transformer.generate_square_subsequent_mask(
-            T, device=device, dtype=x.dtype
-        )
+        # Causal mask: prevent attending to future tokens. Use a BOOL mask
+        # (True = disallow) so its dtype matches the bool padding mask below —
+        # mixing a float attn_mask with a bool key_padding_mask is deprecated in
+        # recent PyTorch. True strictly above the diagonal = future positions.
+        causal_mask = torch.triu(
+            torch.ones(T, T, device=device, dtype=torch.bool), diagonal=1)
 
         # Padding mask for transformer: True = ignore
         if attention_mask is not None:

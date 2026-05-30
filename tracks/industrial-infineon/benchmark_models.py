@@ -82,7 +82,10 @@ def main():
         results[name] = dict(id1=idt1, id5=idt5, o1=ot1, o5=ot5, on=on, sk=sk)
         print(f"{name:<20}{idt1:>10.3f}{idt5:>10.3f}{ot1:>11.3f}{ot5:>11.3f}{on:>7}")
     print("=" * 72)
-    print("Task 3 (anomaly) = physics for ALL models -> F1 1.000, RuleAttr 1.000 (identical).")
+    print("Task 3 (anomaly) decision is the rule engine, which is model-INDEPENDENT,")
+    print("so it is identical across these models (this script only ranks the models'")
+    print("next-step skill). For the model's UNAIDED anomaly signal and the rule-engine")
+    print("numbers, see `python src/evaluate.py --self-eval` (model-only ROC-AUC).")
     if results:
         best = max(results, key=lambda k: (results[k]["o5"], results[k]["o1"], results[k]["id5"]))
         print(f"\nBest OOD generalisation (model next-step): {best}")

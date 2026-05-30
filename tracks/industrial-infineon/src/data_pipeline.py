@@ -149,7 +149,7 @@ def extract_rf_features(
     y_rows = []
 
     for family, steps in sequences:
-        fam_id = family_id_map[family.lower()]
+        fam_id = family_id_map.get(family.lower(), -1)   # 4th family -> -1 (no crash)
         ids = [tokenizer.encode_step(s) for s in steps]
         n = len(ids)
         litho_level = 0

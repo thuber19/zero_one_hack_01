@@ -33,7 +33,7 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-from physics.state_machine import validate_by_state_machine, _extract_litho_level
+from physics.state_machine import validate_by_state_machine
 from physics import process_knowledge as K
 
 # Rough severity (higher = more critical) for ranking / triage.
@@ -94,13 +94,25 @@ def _fix_passivation_order(steps, v) -> tuple[list[str], str]:
     has_dep = any(x in ("DEPOSIT PASSIVATION", "DEPOSIT PASSIVATION LAYER") for x in steps)
     has_cure = "CURE PASSIVATION" in steps
 
+    _DEP_NAMES = ("DEPOSIT PASSIVATION", "DEPOSIT PASSIVATION LAYER")
     if has_dep and has_cure:
-        # both milestones present -> it is purely an ordering problem: relocate
-        # the offending consumer to just after CURE PASSIVATION.
+        # both milestones present -> ordering problem. Two sub-cases:
+        #   (a) a DEPOSIT may itself sit AFTER the CURE (corrupted order) — then
+        #       relocating the consumer after CURE still leaves it before the
+        #       deposit. Canonicalise first: ensure a deposit precedes the cure.
+        #   (b) relocate the offending consumer to just after the LAST cure.
         s = steps[:v.step_index] + steps[v.step_index + 1:]
+        first_cure = min(j for j, x in enumerate(s) if x == "CURE PASSIVATION")
+        dep_idx = [j for j, x in enumerate(s) if x in _DEP_NAMES]
+        if not any(d < first_cure for d in dep_idx):
+            # no deposit before the first cure -> move one (the earliest deposit
+            # that is after the cure) to immediately before the cure.
+            d = min(d for d in dep_idx if d > first_cure)
+            dep_step = s.pop(d)               # d > first_cure, so first_cure unchanged
+            s.insert(first_cure, dep_step)    # deposit now right before that cure
         ci = max(j for j, x in enumerate(s) if x == "CURE PASSIVATION")
         return s[:ci + 1] + [v.step_name] + s[ci + 1:], \
-            f"move '{v.step_name}' to after CURE PASSIVATION"
+            f"order DEPOSIT/CURE PASSIVATION then move '{v.step_name}' after CURE PASSIVATION"
 
     if has_cure and not has_dep:
         # cure exists but the passivation deposit was removed -> add the deposit

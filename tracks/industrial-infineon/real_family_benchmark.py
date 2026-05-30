@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """
-real_family_benchmark.py — OBJECTIVE out-of-distribution test on 5 REAL
-semiconductor device families pulled from verifiable published sources.
+real_family_benchmark.py — out-of-distribution probe on 5 REAL semiconductor
+device families pulled from verifiable published sources.
+
+HONESTY CAVEAT: the device flows below are encoded BY US from the cited sources,
+and the rules they are checked against are also ours. So a "VALID" verdict is
+partly self-fulfilling — this is a TRANSPARENCY / sanity probe (it prints the
+full confusion matrix and every FP/FN for audit), NOT an independent third-party
+benchmark. The genuinely independent correctness check is differential_fuzz.py
+(our engine vs the provided reference checker on in-vocab inputs).
 
 NONE of these families are in the training data (MOSFET / IGBT / IC). Each flow
 below is encoded faithfully from the cited source — including the cleans and

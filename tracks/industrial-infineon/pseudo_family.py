@@ -44,8 +44,12 @@ for _s in (sys.stdout, sys.stderr):
         pass
 
 from generate_sequences import generate_sequence, PAD_WINDOW_STEPS, ELECTRICAL_TEST_STEPS
-from physics.ontology import classify_step
+from physics.ontology import classify_step, STEP_CATEGORY as _STEP_CATEGORY
 from physics.state_machine import validate_by_state_machine, apply_step, WaferState
+
+# Known canonical step names (module scope, so _selftest works when CALLED as a
+# function, not only under `python pseudo_family.py`).
+_ALL_KNOWN = set(_STEP_CATEGORY)
 
 # Steps whose EXACT name carries a milestone or ordering meaning — keep as-is
 # (these are universal logistics/passivation/test terms; the README confirms
@@ -247,9 +251,6 @@ def _selftest(n: int = 500):
 
 
 if __name__ == "__main__":
-    from physics.ontology import STEP_CATEGORY as _SC
-    _ALL_KNOWN = set(_SC)
-
     ap = argparse.ArgumentParser(description="Pseudo-family OOD generator.")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--n", type=int, default=500)

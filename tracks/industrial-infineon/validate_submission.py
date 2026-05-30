@@ -99,6 +99,7 @@ def check_task3(errs, path, eval_ids):
     rows, hdr = _read(path)
     _check_header(errs, "anomaly", hdr, ["EXAMPLE_ID", "IS_VALID", "SCORE", "PREDICTED_RULE"])
     seen = []
+    n_score = 0
     for i, r in enumerate(rows):
         eid = r.get("EXAMPLE_ID", "").strip()
         seen.append(eid)
@@ -107,6 +108,7 @@ def check_task3(errs, path, eval_ids):
             errs.append(f"[anomaly] row {i} ({eid}): IS_VALID must be 0 or 1, got '{iv}'")
         sc = r.get("SCORE", "").strip()
         if sc:
+            n_score += 1
             try:
                 f = float(sc)
                 if not (0.0 <= f <= 1.0):
@@ -118,6 +120,11 @@ def check_task3(errs, path, eval_ids):
             errs.append(f"[anomaly] row {i} ({eid}): valid row should have empty PREDICTED_RULE, got '{rule}'")
         if iv == "0" and rule and rule not in VALID_RULES:
             errs.append(f"[anomaly] row {i} ({eid}): unknown PREDICTED_RULE '{rule}'")
+    # SCORE is OPTIONAL per spec §5.3, so an empty SCORE is not an error — but if
+    # EVERY row omits it, ROC-AUC cannot be computed by the grader. Warn (non-fatal).
+    if rows and n_score == 0:
+        print("  [WARN] anomaly.csv has NO SCORE values — spec-legal, but the grader"
+              " cannot compute ROC-AUC. Emit P(valid) in SCORE to enable it.")
     _check_ids(errs, "anomaly", seen, eval_ids)
 
 

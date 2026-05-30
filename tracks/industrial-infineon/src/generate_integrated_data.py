@@ -22,6 +22,7 @@ import argparse
 import json
 import random
 import sys
+import zlib
 from pathlib import Path
 
 _SRC = Path(__file__).resolve().parent
@@ -51,7 +52,10 @@ def main():
 
     # 1) real validated sequences per family
     for fam in families:
-        seqs = generate_dataset(fam, args.extra_data, seed=args.seed + hash(fam) % 9999,
+        # zlib.crc32 is stable across processes (built-in hash() is salted per
+        # run, which would silently break --seed reproducibility).
+        seqs = generate_dataset(fam, args.extra_data,
+                                seed=args.seed + zlib.crc32(fam.encode()) % 9999,
                                 validate=True)
         family_seqs[fam] = seqs
         print(f"  {fam.upper()}: {len(seqs)} real sequences")
@@ -64,8 +68,15 @@ def main():
     # count stays modest (each tag adds ~120 novel tokens). The complementary,
     # cleaner OOD lever is UNK-dropout during training (randomly mask known step
     # tokens with [UNK]) — see jobs/train_integrated.sh and REPORT.
+    # Use only a few novel "families" (each tag adds ~120 novel tokens) WITHOUT
+    # permanently mutating the module global (which would leak into any later
+    # import of pseudo_family in the same process).
+    _saved_tags = PF.TAGS
     PF.TAGS = PF.TAGS[:3]
-    pseudo = PF.generate_pseudo_valid(args.ood, rng, structural=True)
+    try:
+        pseudo = PF.generate_pseudo_valid(args.ood, rng, structural=True)
+    finally:
+        PF.TAGS = _saved_tags
     for i, (_tag, seq) in enumerate(pseudo):
         family_seqs[families[i % 3]].append(seq)
     print(f"  + {len(pseudo)} pseudo-family (OOD) sequences distributed across families")
@@ -92,9 +103,10 @@ def main():
 
     print(f"\nSaved to {args.output_dir}:  tokenizer ({tokenizer.vocab_size} tokens), "
           f"{len(all_seqs)} sequences")
-    # write model_config so inference loads the right size for this run
-    (args.output_dir / "model_config.json").write_text(
-        json.dumps({"model_size": "small"}), encoding="utf-8")
+    # NOTE: model_config.json is intentionally NOT written here — train.py writes
+    # it with the ACTUAL --model-size chosen for the run, so inference always
+    # loads the architecture that was actually trained (writing a hardcoded
+    # "small" here previously could mislead inference if the dir was reused).
 
 
 if __name__ == "__main__":
