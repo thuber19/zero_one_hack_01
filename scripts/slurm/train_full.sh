@@ -1,22 +1,23 @@
 #!/bin/bash
 #SBATCH --job-name=gpt_fab_full
-#SBATCH --account=__FILL_ME__
+#SBATCH --account=tra24_ppgpu
 #SBATCH --partition=boost_usr_prod
+#SBATCH --reservation=strancc
 #SBATCH --qos=boost_usr_prod
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:4
+#SBATCH --mem=480GB
 #SBATCH --time=08:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 #
 # Submit:
-#   export SLURM_ACCOUNT=<your_cineca_account>   # one-time
-#   sbatch --account=$SLURM_ACCOUNT scripts/slurm/train_full.sh
+#   sbatch scripts/slurm/train_full.sh
 #
 # Resume:
-#   RESUME=1 sbatch --account=$SLURM_ACCOUNT scripts/slurm/train_full.sh
+#   RESUME=1 sbatch scripts/slurm/train_full.sh
 
 set -euo pipefail
 mkdir -p logs
@@ -49,6 +50,12 @@ export TORCH_NCCL_BLOCKING_WAIT=1
 export MASTER_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n1)
 export MASTER_PORT=29500
 export PYTHONUNBUFFERED=1
+
+# Proxy required for internet access on compute nodes (Leonardo HPC)
+export HTTP_PROXY=http://proxy-user:5dd1d2bd@10.99.0.138:4225
+export HTTPS_PROXY=http://proxy-user:5dd1d2bd@10.99.0.138:4225
+export http_proxy=http://proxy-user:5dd1d2bd@10.99.0.138:4225
+export https_proxy=http://proxy-user:5dd1d2bd@10.99.0.138:4225
 
 RESUME_FLAG=""
 if [[ "${RESUME:-0}" == "1" ]]; then
