@@ -41,6 +41,8 @@ def main() -> int:
     ap.add_argument("--output", required=True)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--device", default="cpu")
+    ap.add_argument("--max-seqs", type=int, default=None,
+                    help="Cap number of val sequences (random sample). Useful on CPU.")
     args = ap.parse_args()
 
     device = torch.device(args.device)
@@ -68,6 +70,10 @@ def main() -> int:
         splits_data = json.load(f)
     val_keys = [tuple(x) for x in splits_data.get("val", [])]
     val_seqs = [(v, sid, by_key[(v, sid)][1]) for v, sid in val_keys if (v, sid) in by_key]
+    if args.max_seqs and len(val_seqs) > args.max_seqs:
+        import random
+        random.seed(args.seed)
+        val_seqs = random.sample(val_seqs, args.max_seqs)
     print(f"Calibrating on {len(val_seqs)} val sequences ...")
 
     max_len = model.cfg.max_len

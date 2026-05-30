@@ -14,6 +14,7 @@ python scripts/calibrate_threshold.py \
     --checkpoint "$CHECKPOINT" \
     --splits "$SPLITS" \
     --data-dir "$DATA_DIR" \
-    --output "$OUTPUT"
+    --output "$OUTPUT" \
+    --max-seqs 2000
 
 echo "==> Done: $OUTPUT"
