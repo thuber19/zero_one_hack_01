@@ -230,3 +230,6 @@ __marimo__/
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+# Large generated synthetic datasets (regenerate with scripts/generate_data.py)
+tracks/industrial-infineon/training_data/*_large.csv

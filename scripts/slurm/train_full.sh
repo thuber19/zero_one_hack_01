@@ -32,6 +32,13 @@ source "$HOME/zero_one_env/bin/activate"
 REPO_DIR="${REPO_DIR:-$HOME/zero_one_hack_01}"
 cd "$REPO_DIR"
 DATA_OUT="$WORK/data/fab_sequences"
+
+# Generate large synthetic CSVs if not already present (CPU-only, ~3 min)
+if [[ ! -f "tracks/industrial-infineon/training_data/MOSFET_large.csv" ]]; then
+    echo "[slurm] Generating large dataset CSVs (21k sequences per family)..."
+    python scripts/generate_data.py
+fi
+
 if [[ ! -f "$DATA_OUT/shards/val.pt" ]]; then
     echo "[slurm] Running prepare_data.py..."
     python scripts/prepare_data.py --config configs/train_gpt_fab.yaml --work_dir "$WORK"

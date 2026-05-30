@@ -2,9 +2,9 @@ seed: 42
 
 data:
   csv_paths:
-    IC: tracks/industrial-infineon/training_data/IC_variants.csv
-    IGBT: tracks/industrial-infineon/training_data/IGBT_variants.csv
-    MOSFET: tracks/industrial-infineon/training_data/MOSFET_variants.csv
+    IC: tracks/industrial-infineon/training_data/IC_large.csv
+    IGBT: tracks/industrial-infineon/training_data/IGBT_large.csv
+    MOSFET: tracks/industrial-infineon/training_data/MOSFET_large.csv
   work_subdir: data/fab_sequences
   split_ratio: [0.8, 0.1, 0.1]
   max_len: 256
