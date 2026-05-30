@@ -20,3 +20,6 @@ build_workflow.js
 agentdb.*
 ruvector.db
 configs/_run_*.yaml
+
+# pitch deck build venv
+pitch/.pptxvenv/
