@@ -139,7 +139,8 @@ as evidence of quality. But several of A's harnesses are genuinely useful to B:
 | **`pseudo_family.py`** (4th-family generator) | ✅ **done** | B's new `procseq/ood_novel.py` reuses `pseudo_sequence` + `inject_violation` for a *real* novel-vocabulary OOD test of the learned models (the auditor's keyword-free attack, owned). |
 | **`data/eval_metrics.py`** (official scorer) | ✅ **adopt as single source of truth** | Score *both* pipelines with this one file; keep `procseq/eval_metrics.py` only as a fast dev convenience. Kills the "duplicate scorers may diverge" risk. |
 | **`robustness_test.py`** (malformed-input fuzz) | ✅ adapt | Fire empty / over-length / unknown-family / novel-vocab inputs through B's `infer.py` and assert no crash + well-formed CSV. |
-| `physics/refinery.py` (beam + repair decode) | ⚠️ optional **hybrid** | Wrap B's decoder output with A's refinery so completions are *both* learned **and** guaranteed-valid (best of both for Task 2). |
+| `physics/refinery.py` (beam + repair decode) | ✅ **BUILT** (`procseq/infer_hybrid.py`) | B's learned decoder proposes, A's refinery disposes: Task 1 = legal-first rerank, Task 2 = physics beam-decode → completions are *both* learned **and** guaranteed rule-valid (verified: 0 violations even on an untrained model). Writes `submission_task{1,2}_hybrid{,_real}.csv`. |
+| `src/random_forest.py` (candidate filter) | ⚠️ deferred | RF is bound to A's **own tokenizer indices** + `block_classifier`, and the trained `random_forest.pkl` only exists *after* A's run — so it can only be layered on B at the *name* level once that artifact exists. Small marginal gain on top of decoder+physics-legality; do it only if Task-1 numbers ask for it. |
 | `exhaustive_test` / `differential_fuzz` | ❌ skip | Circular — they prove a function equals itself, not skill. |
 
 ### The "one pipeline" options (pick one)
