@@ -33,4 +33,4 @@ pyyaml = ">=6.0"
 tensorboard = "*"
 
 [environments]
-procseq = { features = ["procseq"] }
+procseq = ["procseq"]
