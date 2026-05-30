@@ -249,6 +249,30 @@ def emit_contrastive(valid_by_family, out: Path, rng: random.Random):
     return len(pairs)
 
 
+def emit_window_edge(out: Path):
+    """Window-EDGE contrastive pairs: for each windowed rule, a minimal sequence
+    valid with the enabler exactly AT the window edge, paired with the same one
+    step PAST the edge (invalid). Teaches the precise boundary. Engine-verified."""
+    F = "MEASURE THICKNESS"  # benign filler (no precondition/effect)
+    specs = [
+        ("RULE_DEP_NO_CLEAN", 12, ["HF DIP"], "DEPOSIT POLYSILICON"),
+        ("RULE_ETCH_NO_MASK", 12, ["DEVELOP PHOTORESIST"], "OXIDE ETCH"),
+        ("RULE_IMPLANT_NO_MASK", 15, ["DEVELOP PHOTORESIST"], "IMPLANT WELL"),
+        ("RULE_CMP_NO_DEP", 6, ["HF DIP", "DEPOSIT INTERLAYER DIELECTRIC"], "CMP DIELECTRIC"),
+    ]
+    rows = []
+    for rule, w, head, trigger in specs:
+        valid = head + [F] * (w - 1) + [trigger]     # enabler distance = w  -> valid
+        invalid = head + [F] * w + [trigger]         # distance = w+1 -> invalid
+        if (not validate_by_state_machine(valid)
+                and {v.rule for v in validate_by_state_machine(invalid)} == {rule}):
+            rows.append({"rule": rule, "window": w,
+                         "valid_at_edge": valid, "invalid_past_edge": invalid,
+                         "note": f"{trigger} needs {head[-1]} within {w} steps"})
+    _write_jsonl(out / "window_edge_pairs.jsonl", rows)
+    return len(rows)
+
+
 def emit_knowledge_cards(out: Path):
     """One card per known step: what it is, real parameters, category, and the
     physical preconditions it imposes + why. The encoded 'understanding'."""
@@ -367,6 +391,8 @@ def main(argv=None) -> int:
     n_an = emit_anomaly(valid_by_family, bad, out)
     print("  writing contrastive minimal pairs …")
     n_cp = emit_contrastive(valid_by_family, out, random.Random(args.seed + 3))
+    print("  writing window-edge contrastive pairs …")
+    n_we = emit_window_edge(out)
     print("  writing knowledge cards …")
     n_kc = emit_knowledge_cards(out)
     (out / "DATA_EXPORT_README.md").write_text(_README, encoding="utf-8")
@@ -379,6 +405,7 @@ def main(argv=None) -> int:
     print(f"  anomaly_labeled.jsonl              : {n_an}")
     print(f"  anomaly_ood.jsonl                  : {len(ood_rows)} (novel families)")
     print(f"  contrastive_pairs.jsonl            : {n_cp} minimal valid/invalid pairs")
+    print(f"  window_edge_pairs.jsonl            : {n_we} window-boundary pairs")
     print(f"  knowledge_cards.jsonl              : {n_kc} steps")
     print(f"  -> {out.resolve()}")
     return 0

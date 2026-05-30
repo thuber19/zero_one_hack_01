@@ -423,6 +423,39 @@ ALL_RULE_IDS: tuple = tuple(
 
 
 # ===========================================================================
+# Causal dependency graph — derived from the rules (for the demo / explanations)
+# ===========================================================================
+
+def causal_edges() -> list[dict]:
+    """Every process-logic dependency, derived from the rules: an enabling event
+    (or milestone) that a triggering operation depends on, with the rule and the
+    physical reason. This IS the 'process logic' the model must learn."""
+    edges = []
+    for r in WINDOWED_RULES:
+        for enabler, window in r.requires:
+            edges.append({"from": enabler, "to": r.trigger, "rule": r.id,
+                          "window": window, "kind": "needs-within",
+                          "why": r.physical_reason})
+    for r in ORDERING_RULES:
+        for flag, _reason in r.requires:
+            edges.append({"from": flag, "to": r.trigger, "rule": r.id,
+                          "window": None, "kind": "needs-before",
+                          "why": r.physical_reason})
+    return edges
+
+
+def to_mermaid() -> str:
+    """Render the dependency graph as a Mermaid flowchart (renders on GitHub)."""
+    lines = ["flowchart LR"]
+    for e in causal_edges():
+        label = e["rule"].replace("RULE_", "")
+        if e["window"]:
+            label += f" ≤{e['window']}"
+        lines.append(f'  {e["from"]}["{e["from"]}"] -->|{label}| {e["to"]}["{e["to"]}"]')
+    return "\n".join(lines)
+
+
+# ===========================================================================
 # Human-readable export — render the whole KB as browsable documentation
 # ===========================================================================
 

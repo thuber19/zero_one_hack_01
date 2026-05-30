@@ -134,6 +134,36 @@ STEP_SEMANTICS: dict[str, StepSemantics] = load_step_semantics()
 # Public accessors (with graceful category fallback)
 # ---------------------------------------------------------------------------
 
+# Curated synonyms from the grammar (generation_rules.md): a step with no direct
+# CSV description maps to its documented twin. Checked before the token-overlap
+# fallback for exactness.
+_CURATED_SYNONYMS = {
+    "DEPOSIT INTERLEVEL DIELECTRIC": "DEPOSIT INTERLAYER DIELECTRIC",
+    "DEPOSIT PASSIVATION LAYER": "DEPOSIT PASSIVATION",
+    "OXIDE ETCH DRY": "OXIDE ETCH",
+    "POLYSILICON ETCH DRY": "POLYSILICON ETCH",
+    "METAL ETCH DRY": "METAL ETCH",
+    "WET CLEAN RCA1": "RCA CLEAN 1",
+    "WET CLEAN RCA2": "RCA CLEAN 2",
+    "STRIP RESIST": "STRIP PHOTORESIST",
+    "DEVELOP PAD WINDOW": "DEVELOP PHOTORESIST",
+    "CLEAN AFTER OXIDE ETCH": "CLEAN AFTER ETCH",
+    "CLEAN AFTER WINDOW ETCH": "CLEAN AFTER ETCH",
+    "CLEAN AFTER FIELD ETCH": "CLEAN AFTER ETCH",
+    "ANNEAL METAL": "ANNEAL METAL 1",
+    "ANNEAL POLYSILICON": "POLYSILICON ANNEAL",
+    "ANNEAL DIELECTRIC": "DENSIFY DIELECTRIC",
+    "DENSIFY OXIDE": "DENSIFY DIELECTRIC",
+    "CMP INTERLAYER DIELECTRIC": "CMP DIELECTRIC",
+    "CMP VIA FILL": "CMP METAL",
+    "DEPOSIT TUNGSTEN SEED": "DEPOSIT METAL SEED",
+    "FILL VIA TUNGSTEN": "FILL VIA METAL",
+    "OPEN BOND PAD WINDOW": "OPEN PAD WINDOW",
+    "OPEN PAD WINDOW LITHO": "PAD WINDOW LITHO",
+    "PASSIVATION ETCH": "PASSIVATION ETCH PAD OPENING",
+}
+
+
 def _best_synonym(step: str) -> str:
     """Find the closest documented step in the SAME category by token overlap
     (resolves grammar synonyms like 'DEPOSIT INTERLEVEL DIELECTRIC' ~
@@ -164,6 +194,10 @@ def describe(step: str) -> str:
     sem = STEP_SEMANTICS.get(step)
     if sem and sem.description:
         return sem.description
+    # curated synonym (exact, from the grammar)
+    twin = _CURATED_SYNONYMS.get(step)
+    if twin and twin in STEP_SEMANTICS and STEP_SEMANTICS[twin].description:
+        return STEP_SEMANTICS[twin].description
     syn = _best_synonym(step)
     if syn:
         return syn

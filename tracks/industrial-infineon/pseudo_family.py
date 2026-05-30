@@ -133,6 +133,23 @@ def _perturb_structure(seq: list[str], rng: random.Random) -> list[str]:
         if len(s) < 3:
             break
         s.insert(rng.randint(1, len(s) - 1), "CLEAN AFTER ETCH")
+    # Cycle-count variation: add a SECOND METAL LAYER — an explicitly documented
+    # valid variation axis (generation_rules.md §4). Inserts a full extra
+    # litho->metal-etch cycle at the next sequential mask level, right after the
+    # existing metal block. Any structurally-invalid result is discarded by the
+    # caller's engine check, so validity is guaranteed.
+    if rng.random() < 0.5:
+        levels = [int(x.rsplit(" ", 1)[1]) for x in s
+                  if x.startswith("ALIGN MASK LEVEL") and x.rsplit(" ", 1)[1].isdigit()]
+        nxt = (max(levels) + 1) if levels else 1
+        anchor = next((i for i in range(len(s) - 1, -1, -1)
+                       if s[i] == "CLEAN AFTER METAL ETCH"), None)
+        if anchor is not None:
+            extra = ["DEPOSIT TOP METAL", "ANNEAL METAL", "SPIN COAT PHOTORESIST",
+                     f"ALIGN MASK LEVEL {nxt}", f"EXPOSE LITHO LEVEL {nxt}",
+                     "DEVELOP PHOTORESIST", "METAL ETCH", "STRIP RESIST",
+                     "CLEAN AFTER METAL ETCH"]
+            s = s[:anchor + 1] + extra + s[anchor + 1:]
     return s
 
 

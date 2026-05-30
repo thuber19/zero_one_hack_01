@@ -19,6 +19,29 @@ from tokenizer import StepTokenizer
 from transformer_model import create_model, ProcessTransformer
 from random_forest import StepCandidateForest
 
+# physics (one level up) for the optional next-category auxiliary head
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from physics.ontology import classify_step as _classify_step
+
+
+def build_id2cat(tokenizer):
+    """Map each token id -> physical-category index (specials/pad -> -1).
+    Used to derive next-category targets for the auxiliary head WITHOUT touching
+    the data pipeline."""
+    reals = [t for t in tokenizer.id2token.values()
+             if not (t.startswith("[") and t.endswith("]"))]
+    cats = sorted({_classify_step(t) for t in reals} | {"UNKNOWN"})
+    cat2idx = {c: i for i, c in enumerate(cats)}
+    id2cat = []
+    for i in range(tokenizer.vocab_size):
+        t = tokenizer.id2token.get(i, "[UNK]")
+        if t.startswith("[") and t.endswith("]"):
+            id2cat.append(-1)
+        else:
+            id2cat.append(cat2idx.get(_classify_step(t), -1))
+    return id2cat, len(cats)
+
 
 OUTPUT_DIR = Path(os.environ.get(
     "OUTPUT_DIR",
@@ -60,6 +83,8 @@ def train_transformer(
     save_dir: Path = OUTPUT_DIR,
     patience: int = 20,
     unk_dropout: float = 0.0,
+    id2cat: "torch.Tensor | None" = None,
+    cat_weight: float = 0.3,
 ) -> list[dict]:
     """Train the transformer and return loss history.
 
@@ -94,7 +119,9 @@ def train_transformer(
                 drop = attn_mask.bool() & (input_ids >= 7) & (rand < unk_dropout)
                 input_ids = input_ids.masked_fill(drop, 3)  # UNK_ID = 3
 
-            loss = model.compute_loss(input_ids, target_ids, attn_mask)
+            cat_ids = id2cat[target_ids] if id2cat is not None else None
+            loss = model.compute_loss(input_ids, target_ids, attn_mask,
+                                      category_ids=cat_ids, cat_weight=cat_weight)
 
             optimizer.zero_grad()
             loss.backward()
@@ -186,6 +213,10 @@ def main():
                         help="prob. of [UNK]-masking a context token (OOD lever).")
     parser.add_argument("--init-from", type=str, default=None,
                         help="checkpoint to continue/fine-tune from (same vocab).")
+    parser.add_argument("--aux-category", action="store_true",
+                        help="add the next-category auxiliary head (OOD lever).")
+    parser.add_argument("--cat-weight", type=float, default=0.3,
+                        help="weight of the auxiliary category loss.")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -250,7 +281,16 @@ def main():
         val_ds, batch_size=args.batch_size, shuffle=False, num_workers=0
     )
 
-    model = create_model(tokenizer.vocab_size, size=args.model_size)
+    id2cat_t = None
+    n_categories = 0
+    if args.aux_category:
+        id2cat_list, n_categories = build_id2cat(tokenizer)
+        id2cat_t = torch.tensor(id2cat_list, dtype=torch.long, device=device)
+        print(f"  Auxiliary category head ON ({n_categories} categories, "
+              f"weight={args.cat_weight})")
+
+    model = create_model(tokenizer.vocab_size, size=args.model_size,
+                         n_categories=n_categories)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"Model: {args.model_size} ({n_params:,} parameters)")
 
@@ -268,6 +308,7 @@ def main():
         model, train_loader, val_loader,
         epochs=args.epochs, lr=args.lr, device=device,
         save_dir=OUTPUT_DIR, unk_dropout=args.unk_dropout,
+        id2cat=id2cat_t, cat_weight=args.cat_weight,
     )
 
     # ── Save training history ──

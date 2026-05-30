@@ -122,8 +122,41 @@ SCHOTTKY = PREFIX + [
     "PARAMETRIC TEST", "WAFER SORT TEST", "SHIP LOT",
 ]
 
+# Additional families (LOW PRIORITY). HYPOTHESIS ONLY: these test whether our
+# category-based generalisation holds across more real device types. They are
+# NOT and cannot be assumed to be the organizers' secret 4th family — that is
+# unknown. Treat these as breadth-of-hypothesis evidence, not a guarantee.
+JFET = PREFIX + [
+    "EPITAXIAL DEPOSITION",
+    *litho(1), "OXIDE ETCH", "STRIP PHOTORESIST", "CLEAN AFTER OXIDE ETCH",
+    "IMPLANT GATE", "RAPID THERMAL ANNEAL",
+    *litho(2), "OXIDE ETCH", "STRIP PHOTORESIST", "CLEAN AFTER CONTACT ETCH",
+    "DEPOSIT CONTACT METAL",
+] + END
+THYRISTOR = PREFIX + [
+    "THERMAL OXIDATION",
+    *litho(1), "OXIDE ETCH", "STRIP PHOTORESIST", "CLEAN AFTER OXIDE ETCH",
+    "DIFFUSE P BASE", "DRIVE IN DIFFUSION",
+    *litho(2), "OXIDE ETCH", "STRIP PHOTORESIST", "CLEAN AFTER OXIDE ETCH",
+    "IMPLANT N EMITTER", "RAPID THERMAL ANNEAL",
+    *litho(3), "OXIDE ETCH", "STRIP PHOTORESIST", "CLEAN AFTER CONTACT ETCH",
+    "DEPOSIT ANODE METAL",
+] + END
+FINFET = PREFIX + [
+    "GROW FIN HARDMASK",
+    *litho(1), "ETCH FIN", "STRIP PHOTORESIST", "CLEAN AFTER FIN ETCH",
+    "DEPOSIT SHALLOW TRENCH OXIDE",
+    "GROW GATE OXIDE", "DEPOSIT POLYSILICON",
+    *litho(2), "POLYSILICON ETCH", "STRIP PHOTORESIST", "CLEAN AFTER POLY ETCH",
+    "IMPLANT SOURCE DRAIN", "RAPID THERMAL ANNEAL",
+    *litho(3), "OXIDE ETCH", "STRIP PHOTORESIST", "CLEAN AFTER CONTACT ETCH",
+    "DEPOSIT CONTACT METAL",
+] + END
+
 FAMILIES = {"GaN_HEMT": GAN_HEMT, "Solar_cell": SOLAR_CELL, "BJT": BJT,
-            "SiC_MOSFET": SIC_MOSFET, "Schottky": SCHOTTKY}
+            "SiC_MOSFET": SIC_MOSFET, "Schottky": SCHOTTKY,
+            # hypothesis-only additions (see note above)
+            "JFET": JFET, "Thyristor": THYRISTOR, "FinFET": FINFET}
 
 
 # ── Corruptions: real process mistakes ──────────────────────────────────────

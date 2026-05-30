@@ -40,11 +40,13 @@ class ProcessTransformer(nn.Module):
         n_layers: int = 6,
         max_seq_len: int = 200,
         dropout: float = 0.1,
+        n_categories: int = 0,
     ):
         super().__init__()
         self.vocab_size = vocab_size
         self.d_model = d_model
         self.max_seq_len = max_seq_len
+        self.n_categories = n_categories
 
         self.token_emb = nn.Embedding(vocab_size, d_model, padding_idx=0)
         self.pos_emb = nn.Embedding(max_seq_len, d_model)
@@ -66,6 +68,13 @@ class ProcessTransformer(nn.Module):
         # Weight tying
         self.head.weight = self.token_emb.weight
 
+        # Optional auxiliary head: predict the next step's physical CATEGORY.
+        # A training-time teacher signal that forces the model to learn what a
+        # step *does* (deposition/etch/...), not just its name — improving
+        # generalisation to the unseen 4th family. Default off (n_categories=0)
+        # so existing checkpoints load unchanged.
+        self.cat_head = nn.Linear(d_model, n_categories) if n_categories > 0 else None
+
         self._init_weights()
 
     def _init_weights(self):
@@ -77,16 +86,20 @@ class ProcessTransformer(nn.Module):
         self,
         input_ids: torch.Tensor,
         attention_mask: torch.Tensor | None = None,
+        return_cat: bool = False,
     ) -> torch.Tensor:
         """
         Parameters
         ----------
         input_ids : (B, T) long tensor
         attention_mask : (B, T) long tensor, 1=attend, 0=ignore
+        return_cat : if True (and a category head exists), also return the
+                     category logits (B, T, n_categories). Default False keeps
+                     the signature unchanged for inference.
 
         Returns
         -------
-        logits : (B, T, vocab_size)
+        logits : (B, T, vocab_size)   [or (logits, cat_logits) if return_cat]
         """
         B, T = input_ids.shape
         device = input_ids.device
@@ -118,6 +131,8 @@ class ProcessTransformer(nn.Module):
 
         x = self.ln_f(x)
         logits = self.head(x)
+        if return_cat and self.cat_head is not None:
+            return logits, self.cat_head(x)
         return logits
 
     def compute_loss(
@@ -125,15 +140,23 @@ class ProcessTransformer(nn.Module):
         input_ids: torch.Tensor,
         target_ids: torch.Tensor,
         attention_mask: torch.Tensor,
+        category_ids: torch.Tensor | None = None,
+        cat_weight: float = 0.3,
     ) -> torch.Tensor:
-        """Compute cross-entropy loss, ignoring padded positions."""
+        """Cross-entropy on the next step, ignoring padding. If category_ids
+        (next-step categories, pad=-1) and a category head are present, add a
+        weighted auxiliary category cross-entropy."""
+        if category_ids is not None and self.cat_head is not None:
+            logits, cat_logits = self.forward(input_ids, attention_mask, return_cat=True)
+            step_loss = F.cross_entropy(
+                logits.reshape(-1, self.vocab_size), target_ids.reshape(-1), ignore_index=0)
+            cat_loss = F.cross_entropy(
+                cat_logits.reshape(-1, self.n_categories), category_ids.reshape(-1),
+                ignore_index=-1)
+            return step_loss + cat_weight * cat_loss
         logits = self.forward(input_ids, attention_mask)
-        # Flatten for cross-entropy
-        logits_flat = logits.reshape(-1, self.vocab_size)
-        targets_flat = target_ids.reshape(-1)
-        # Ignore padding (target=0)
-        loss = F.cross_entropy(logits_flat, targets_flat, ignore_index=0)
-        return loss
+        return F.cross_entropy(
+            logits.reshape(-1, self.vocab_size), target_ids.reshape(-1), ignore_index=0)
 
     @torch.no_grad()
     def get_next_step_probs(
@@ -194,6 +217,7 @@ class ProcessTransformer(nn.Module):
 def create_model(
     vocab_size: int,
     size: str = "small",
+    n_categories: int = 0,
 ) -> ProcessTransformer:
     """
     Factory for different model sizes.
@@ -202,6 +226,10 @@ def create_model(
       tiny:  2 layers, 128 dim, 4 heads (~200K params)
       small: 6 layers, 256 dim, 8 heads (~3M params)
       medium: 8 layers, 512 dim, 8 heads (~20M params)
+
+    n_categories > 0 adds the optional next-category auxiliary head (see
+    ProcessTransformer). Leave 0 to reproduce the original architecture exactly
+    (so existing checkpoints load unchanged).
     """
     configs = {
         "tiny": dict(d_model=128, n_heads=4, n_layers=2, dropout=0.1),
@@ -211,4 +239,5 @@ def create_model(
     if size not in configs:
         raise ValueError(f"Unknown size '{size}'. Choose from: {list(configs.keys())}")
 
-    return ProcessTransformer(vocab_size=vocab_size, **configs[size])
+    return ProcessTransformer(vocab_size=vocab_size, n_categories=n_categories,
+                              **configs[size])
