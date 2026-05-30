@@ -43,10 +43,37 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-from generate_sequences import read_csv_sequences
+from generate_sequences import read_csv_sequences, validate_sequence as REFERENCE
 from physics.state_machine import validate_by_state_machine as ENGINE
 from physics.known_vocab import KNOWN_VOCAB
 import bad_data_generator as BDG
+
+
+def structure_mutate(seq: list[str], rng: random.Random) -> list[str]:
+    """Apply an in-vocabulary STRUCTURE change (new block composition / cycle
+    count) — the README's actual definition of a 4th family. Validity may change;
+    the caller RE-LABELS with the reference, so ground truth stays exact. This is
+    the axis the token-only benchmark did NOT exercise (audit R4)."""
+    s = list(seq)
+    op = rng.choice(["insert_metal_cycle", "dup_litho_cycle", "drop_optional", "insert_clean"])
+    if op == "insert_metal_cycle":
+        blk = ["DEPOSIT METAL 1", "SPIN COAT PHOTORESIST", "ALIGN MASK LEVEL 5",
+               "EXPOSE LITHO LEVEL 5", "DEVELOP PHOTORESIST", "METAL ETCH",
+               "STRIP PHOTORESIST", "CLEAN AFTER METAL ETCH"]
+        pos = next((i for i, x in enumerate(s) if x.upper().startswith("DEPOSIT PASSIVATION")), len(s) - 1)
+        s[pos:pos] = blk
+    elif op == "dup_litho_cycle":
+        i = next((k for k, x in enumerate(s) if x.upper().startswith("SPIN COAT")), None)
+        if i is not None:
+            s[i:i] = s[i:i + 4]
+    elif op == "drop_optional":
+        opt = [k for k, x in enumerate(s) if x.upper().startswith(("MEASURE", "INSPECT"))]
+        if opt:
+            del s[rng.choice(opt)]
+    elif op == "insert_clean":
+        i = rng.randrange(1, len(s))
+        s[i:i] = ["WAFER SURFACE CLEAN"]
+    return s
 
 # Material / device-specific words we swap for novel ones. We deliberately KEEP
 # the functional verbs (DEPOSIT/ETCH/IMPLANT/CLEAN/ANNEAL/CMP/EXPOSE/DEVELOP/
@@ -204,6 +231,30 @@ def main():
           f"(violations lost: {bmiss})")
     print("  (a single novel token must not create or hide a violation; "
           "the routing/category engine handles known + novel steps together.)")
+
+    # ── STRUCTURE + token transfer (audit R4): vary BLOCK STRUCTURE, RE-LABEL with
+    #    the reference on the in-vocab mutant, THEN rename materials. Tests novel
+    #    structure, not just novel tokens. Ground truth stays exact. ──
+    print("\nStructure+token transfer (novel block structure AND renamed materials):")
+    rng3 = random.Random(args.seed + 3)
+    src = valid_seqs + [r["steps"] for r in bad_recs]
+    tp = fp = tn = fn = 0
+    for base in src:
+        mut = structure_mutate(base, rng3)                 # in-vocab structure change
+        true_invalid = bool(REFERENCE(mut))                # exact label from grader
+        ood = make_ood_family(mut, 0.30, rng3)             # then rename materials
+        pred_invalid = bool(ENGINE(ood))
+        if true_invalid and pred_invalid: tp += 1
+        elif (not true_invalid) and pred_invalid: fp += 1
+        elif (not true_invalid) and (not pred_invalid): tn += 1
+        else: fn += 1
+    n = tp + fp + tn + fn
+    acc = (tp + tn) / max(n, 1)
+    prec = tp / max(tp + fp, 1); recl = tp / max(tp + fn, 1)
+    f1 = 2 * prec * recl / max(prec + recl, 1e-9)
+    print(f"  n={n}  Acc={acc:.3f}  Prec={prec:.3f}  Rec={recl:.3f}  F1={f1:.3f}  "
+          f"(TP/FP/TN/FN={tp}/{fp}/{tn}/{fn})")
+    print(f"  -> {'PASS (>=80%)' if acc>=0.80 else 'BELOW 80%'} on combined structure+token OOD")
 
 
 if __name__ == "__main__":

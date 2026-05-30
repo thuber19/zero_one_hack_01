@@ -26,6 +26,12 @@ for _p in (str(_SUBROOT), str(_SUBROOT / "training_data")):
     if _p not in _sys.path:
         _sys.path.insert(0, _p)
 from physics.state_machine import validate_sequence_combined, unknown_tokens as _unknown_tokens
+
+# SCORE polarity (ASSUMPTION A5): spec §5.3 says SCORE = P(valid), higher = more
+# valid. If the real grader wants P(anomaly) instead, flip this ONE switch (or set
+# env SCORE_IS_P_VALID=0) — every emitted SCORE inverts, no other change needed.
+import os as _os
+SCORE_IS_P_VALID = _os.environ.get("SCORE_IS_P_VALID", "1") != "0"
 from refinery import PhysicsRefinery, _ranked as _refinery_ranked
 import fix as _fix
 
@@ -326,12 +332,13 @@ class ProcessPredictor:
                 explanation = findings[0].why
                 suggested_fixes = [f.fix_description for f in findings]
 
+        emitted_score = combined_score if SCORE_IS_P_VALID else (1.0 - combined_score)
         return {
             "is_valid": is_valid,
             "verdict": verdict,                    # VALID / INVALID / INSUFFICIENT_INFORMATION
             "insufficient_information": verdict == "INSUFFICIENT_INFORMATION",
             "unknown_tokens": unknowns[:10],       # explicit: what we could not classify
-            "score": round(combined_score, 4),
+            "score": round(emitted_score, 4),
             "predicted_rule": predicted_rule,
             "explanation": explanation,
             "suggested_fixes": suggested_fixes,
