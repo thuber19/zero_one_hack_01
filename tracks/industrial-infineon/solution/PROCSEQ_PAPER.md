@@ -424,7 +424,7 @@ flowchart LR
       direction TB
       C1(("valid cluster")):::ok
       C2(("invalid cluster")):::bad
-      C1 -. "push twins apart" .- C2
+      C1 -. "push twins apart" .-> C2
     end
     classDef ok fill:#d7f5dd,stroke:#1a7f37;
     classDef bad fill:#ffe1e1,stroke:#b42318;
@@ -488,7 +488,7 @@ flowchart TB
         E["Encoder<br/>P(invalid) — graded score"]
     end
     subgraph P["PHYSICS REFINERY — dispose"]
-        L["is_legal(step \| prefix)<br/>within rule window"]
+        L["is_legal(step after prefix)<br/>within rule window"]
         B["beam_decode + repair<br/>(beam 5, branch 8, α 0.7)"]
         V["validate_sequence(s)<br/>verdict + first rule"]
     end
@@ -538,7 +538,7 @@ sequenceDiagram
     D-->>R: top-k candidates ranked by p_θ
     R->>R: bucket each candidate via is_legal(c | prefix)
     R-->>O: legal-first re-sort → RANK_1..5
-    Note over D,R: model picks what is likely;<br/>physics floats what is legal to the top
+    Note over D,R: model picks what is likely — physics floats what is legal to the top
 ```
 
 ### 6.3 Task 2 — rule-vetoed beam search with repair (guaranteed valid)
@@ -564,7 +564,7 @@ distance. The beam loop, per generated position:
 ```mermaid
 flowchart TD
     A["current beams<br/>(partial valid routes)"] --> B["decoder proposes<br/>top-`branch`=8 next steps per beam"]
-    B --> C{"is_legal(step \| beam)?"}
+    B --> C{"step legal after beam?"}
     C -->|"yes"| D["keep expansion"]
     C -->|"no"| E["veto (drop)"]
     D --> F{"beam dead-ended?<br/>(no legal next step)"}
