@@ -96,18 +96,25 @@ def _core(step: str) -> str:
     return step
 
 
-def build_renamer(tag: str, base_steps: set[str]) -> dict[str, str]:
-    """Build a deterministic, category-preserving rename map for one tag."""
+def build_renamer(tag: str, base_steps: set[str],
+                  rename_fraction: float = 1.0, rng=None) -> dict[str, str]:
+    """Category-preserving rename map for one tag. `rename_fraction` controls how
+    many ELIGIBLE device steps are renamed (1.0 = all → heavily-novel vocabulary;
+    0.25 = a few → 'mostly shares vocabulary', the README's literal description of
+    the 4th family). Spanning this fraction during augmentation lets the model see
+    the whole novelty spectrum (few→many novel tokens) since the real Task-4 mix is
+    unknown. With rename_fraction<1, `rng` selects which eligible steps to rename."""
+    eligible = [s for s in sorted(base_steps)
+                if s not in _KEEP_EXACT
+                and classify_step(s) not in _KEEP_CATEGORIES
+                and classify_step(s) in _TEMPLATES]
+    if rename_fraction < 1.0 and rng is not None and eligible:
+        k = max(1, round(rename_fraction * len(eligible)))
+        eligible = rng.sample(eligible, k)
     rename: dict[str, str] = {}
-    for step in base_steps:
-        if step in _KEEP_EXACT:
-            continue
-        cat = classify_step(step)
-        if cat in _KEEP_CATEGORIES or cat not in _TEMPLATES:
-            continue
-        novel = _TEMPLATES[cat].format(tag=tag, core=_core(step)).strip()
-        # collapse double spaces
-        rename[step] = " ".join(novel.split())
+    for step in eligible:
+        novel = _TEMPLATES[classify_step(step)].format(tag=tag, core=_core(step)).strip()
+        rename[step] = " ".join(novel.split())   # collapse double spaces
     return rename
 
 
@@ -116,11 +123,13 @@ TAGS = ["SICFET", "GANHEMT", "INPDIODE", "GAASFET", "SIGEBJT", "ALNPOWER",
         "SICDIODE", "GANIC", "INPLASER", "SIGEHBT"]
 
 
-def pseudo_sequence(base_family: str, tag: str, rng: random.Random) -> list[str]:
-    """Generate a valid base sequence, then rename device steps to a novel
-    vocabulary tagged `tag`."""
+def pseudo_sequence(base_family: str, tag: str, rng: random.Random,
+                    rename_fraction: float = 1.0) -> list[str]:
+    """Generate a valid base sequence, then rename a `rename_fraction` of its
+    device steps to a novel vocabulary tagged `tag` (1.0=heavy novelty,
+    <1=mostly-shared vocabulary, matching the README's 4th-family description)."""
     base = generate_sequence(base_family, rng)
-    rename = build_renamer(tag, set(base))
+    rename = build_renamer(tag, set(base), rename_fraction=rename_fraction, rng=rng)
     return [rename.get(s, s) for s in base]
 
 
@@ -164,12 +173,16 @@ def generate_pseudo_valid(n: int, rng: random.Random,
     optional-step variation) — lexical *and* structural OOD."""
     out = []
     fams = ("mosfet", "igbt", "ic")
+    # Span the novelty spectrum so the model trains on both 'mostly-shared' (few
+    # novel tokens) and heavily-novel families — the real Task-4 mix is unknown.
+    fractions = (0.25, 0.5, 0.75, 1.0)
     attempts = 0
     while len(out) < n and attempts < n * 6:
         attempts += 1
         tag = rng.choice(TAGS)
         fam = rng.choice(fams)
-        seq = pseudo_sequence(fam, tag, rng)
+        frac = rng.choice(fractions)
+        seq = pseudo_sequence(fam, tag, rng, rename_fraction=frac)
         if structural and rng.random() < 0.5:
             seq = _perturb_structure(seq, rng)
         if not validate_by_state_machine(seq):       # category-verified valid
