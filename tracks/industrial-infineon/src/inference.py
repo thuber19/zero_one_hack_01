@@ -88,6 +88,13 @@ class ProcessPredictor:
         ids = self.tokenizer.encode_sequence(steps, family)
         # Remove EOS since sequence is partial
         ids = ids[:-1]
+        # Robustness: never exceed the model's positional range. Keep [BOS]+family
+        # token and the MOST RECENT steps (recency drives next-step prediction).
+        maxlen = getattr(self.model, "max_seq_len", 200)
+        if len(ids) > maxlen:
+            ids = ids[:2] + ids[2:][-(maxlen - 2):]
+        if not ids:                      # fully-empty input -> at least [BOS]
+            ids = [1]
         input_ids = torch.tensor([ids], dtype=torch.long, device=self.device)
         attn_mask = torch.ones_like(input_ids)
         return input_ids, attn_mask
@@ -122,7 +129,7 @@ class ProcessPredictor:
         # Get transformer probabilities
         probs = self.model.get_next_step_probs(input_ids, attn_mask)
 
-        if use_rf_mask and self.rf.is_fitted:
+        if use_rf_mask and self.rf.is_fitted and steps:
             # Get RF candidate mask
             litho_level = self._get_litho_level(steps)
             position_frac = len(steps) / 150.0  # rough normalization
@@ -238,8 +245,13 @@ class ProcessPredictor:
           - predicted_rule: str or empty
           - details: dict with per-step breakdown
         """
-        # Signal 1: Transformer loss
+        # Signal 1: Transformer loss. Truncate to the model's positional range so
+        # an over-long (or malformed) sequence cannot crash the loss head; the
+        # rule validator below still sees the FULL sequence (it is stdlib, no limit).
         ids = self.tokenizer.encode_sequence(steps, family)
+        maxlen = getattr(self.model, "max_seq_len", 200)
+        if len(ids) > maxlen:
+            ids = ids[:2] + ids[2:][-(maxlen - 2):]
         input_ids = torch.tensor([ids], dtype=torch.long, device=self.device)
         attn_mask = torch.ones_like(input_ids)
         avg_loss = self.model.sequence_loss(input_ids, attn_mask)

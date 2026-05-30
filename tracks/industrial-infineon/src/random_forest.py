@@ -165,6 +165,10 @@ class StepCandidateForest:
         print(f"  Saved RF model to {path}")
 
     def load(self, path: Path, tokenizer: StepTokenizer):
+        # SECURITY: pickle.load executes arbitrary code if the file is malicious.
+        # Only ever load a random_forest.pkl YOU trained (or your teammate's, from
+        # the trusted repo) — never one from an untrusted/third-party source.
+        # The rest of the system (physics layer) is stdlib and pickle-free.
         with open(path, "rb") as f:
             data = pickle.load(f)
         self.clf = data["clf"]

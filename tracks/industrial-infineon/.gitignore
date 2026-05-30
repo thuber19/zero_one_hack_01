@@ -1,0 +1,5 @@
+
+# local sample eval set (reproducible via make_sample_eval.py)
+sample_eval/
+# machine-specific convenience runner
+run_m3.sh
