@@ -59,8 +59,15 @@ def train_transformer(
     device: str = "cpu",
     save_dir: Path = OUTPUT_DIR,
     patience: int = 20,
+    unk_dropout: float = 0.0,
 ) -> list[dict]:
-    """Train the transformer and return loss history."""
+    """Train the transformer and return loss history.
+
+    unk_dropout: probability of replacing a real (non-special) input token with
+    [UNK] during training. Teaches the model to predict from CONTEXT when a
+    token is unknown — the integration lever for the unseen 4th family (Task 4),
+    with no vocabulary growth. Targets are left intact (it must still predict the
+    true next step)."""
     model = model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
@@ -80,6 +87,12 @@ def train_transformer(
             input_ids = batch["input_ids"].to(device)
             target_ids = batch["target_ids"].to(device)
             attn_mask = batch["attention_mask"].to(device)
+
+            if unk_dropout > 0.0:
+                # replace real step tokens (id >= 7; specials are 0..6) with UNK
+                rand = torch.rand_like(input_ids, dtype=torch.float)
+                drop = attn_mask.bool() & (input_ids >= 7) & (rand < unk_dropout)
+                input_ids = input_ids.masked_fill(drop, 3)  # UNK_ID = 3
 
             loss = model.compute_loss(input_ids, target_ids, attn_mask)
 
@@ -169,10 +182,17 @@ def main():
     parser.add_argument("--device", default=None,
                         help="Device (auto-detected if not set)")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--unk-dropout", type=float, default=0.0,
+                        help="prob. of [UNK]-masking a context token (OOD lever).")
+    parser.add_argument("--init-from", type=str, default=None,
+                        help="checkpoint to continue/fine-tune from (same vocab).")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    # record the size so inference loads the matching architecture
+    (OUTPUT_DIR / "model_config.json").write_text(
+        json.dumps({"model_size": args.model_size}))
 
     # Auto-detect device
     if args.device:
@@ -234,10 +254,20 @@ def main():
     n_params = sum(p.numel() for p in model.parameters())
     print(f"Model: {args.model_size} ({n_params:,} parameters)")
 
+    if args.init_from:
+        try:
+            sd = torch.load(args.init_from, map_location="cpu", weights_only=True)
+            missing, unexpected = model.load_state_dict(sd, strict=False)
+            print(f"  Continued from {args.init_from} "
+                  f"(missing={len(missing)}, unexpected={len(unexpected)})")
+        except Exception as e:
+            print(f"  WARNING: could not init from {args.init_from} ({e}); "
+                  "training from scratch instead.")
+
     history = train_transformer(
         model, train_loader, val_loader,
         epochs=args.epochs, lr=args.lr, device=device,
-        save_dir=OUTPUT_DIR,
+        save_dir=OUTPUT_DIR, unk_dropout=args.unk_dropout,
     )
 
     # ── Save training history ──

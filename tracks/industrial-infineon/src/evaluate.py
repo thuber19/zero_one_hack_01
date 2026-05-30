@@ -27,6 +27,29 @@ import torch
 
 TRAINING_DATA_DIR = Path(__file__).resolve().parent.parent / "training_data"
 sys.path.insert(0, str(TRAINING_DATA_DIR))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # for physics.*
+
+from physics.ontology import classify_step as _classify_step
+
+
+def _block_seq(steps):
+    """Collapse a step list to its category ('block') sequence."""
+    out = []
+    for s in steps:
+        c = _classify_step(s)
+        if not out or out[-1] != c:
+            out.append(c)
+    return out
+
+
+def _roc_auc(pos_scores, neg_scores):
+    """Mann-Whitney ROC-AUC; pos=invalid-class scores, neg=valid. None if a
+    class is empty."""
+    if not pos_scores or not neg_scores:
+        return None
+    wins = sum((1.0 if a > b else 0.5 if a == b else 0.0)
+               for a in pos_scores for b in neg_scores)
+    return wins / (len(pos_scores) * len(neg_scores))
 
 from generate_sequences import generate_dataset, validate_sequence
 from data_pipeline import prepare_all_data
@@ -197,6 +220,7 @@ def compute_completion_metrics(predictions: list[dict], ground_truth: list[dict]
     exact_match = 0
     edit_distances = []
     token_accuracies = []
+    block_accuracies = []
     total = 0
 
     for pred in predictions:
@@ -220,11 +244,18 @@ def compute_completion_metrics(predictions: list[dict], ground_truth: list[dict]
         matches = sum(1 for a, b in zip(pred_steps, true_remaining) if a == b)
         token_accuracies.append(matches / max(len(true_remaining), 1))
 
+        # Block-level accuracy: position-wise match on the category ("block")
+        # sequence (consecutive duplicates collapsed).
+        tb, pb = _block_seq(true_remaining), _block_seq(pred_steps)
+        bm = sum(1 for a, b in zip(pb, tb) if a == b)
+        block_accuracies.append(bm / max(len(tb), 1))
+
     n = max(total, 1)
     return {
         "exact_match_rate": exact_match / n,
-        "normalized_edit_distance": np.mean(edit_distances) if edit_distances else 1.0,
-        "token_accuracy": np.mean(token_accuracies) if token_accuracies else 0.0,
+        "normalized_edit_distance": float(np.mean(edit_distances)) if edit_distances else 1.0,
+        "token_accuracy": float(np.mean(token_accuracies)) if token_accuracies else 0.0,
+        "block_accuracy": float(np.mean(block_accuracies)) if block_accuracies else 0.0,
         "total": total,
     }
 
@@ -262,11 +293,26 @@ def compute_anomaly_metrics(predictions: list[dict], ground_truth: list[dict]) -
     recall = tp / max(tp + fn, 1)
     f1 = 2 * precision * recall / max(precision + recall, 1e-8)
 
+    # ROC-AUC: positive class = INVALID. SCORE is P(valid), so P(invalid)=1-SCORE.
+    pos, neg = [], []   # pos = invalid-class scores, neg = valid-class scores
+    for pred in predictions:
+        eid = pred["EXAMPLE_ID"]
+        if eid not in gt_map:
+            continue
+        true_valid, _ = gt_map[eid]
+        try:
+            p_invalid = 1.0 - float(pred.get("SCORE", 0.5))
+        except (TypeError, ValueError):
+            p_invalid = 0.5
+        (neg if true_valid else pos).append(p_invalid)
+    auc = _roc_auc(pos, neg)
+
     return {
         "binary_accuracy": (tp + tn) / max(total, 1),
         "precision": precision,
         "recall": recall,
         "f1": f1,
+        "roc_auc": auc,
         "rule_attribution_accuracy": rule_correct / max(rule_total, 1),
         "confusion_matrix": {"tp": tp, "fp": fp, "tn": tn, "fn": fn},
         "total": total,
@@ -346,6 +392,7 @@ def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cp
     print(f"  Exact Match Rate:          {task2_metrics['exact_match_rate']:.4f}")
     print(f"  Normalized Edit Distance:  {task2_metrics['normalized_edit_distance']:.4f}")
     print(f"  Token Accuracy:            {task2_metrics['token_accuracy']:.4f}")
+    print(f"  Block-level Accuracy:      {task2_metrics['block_accuracy']:.4f}")
 
     # ── Task 3: Anomaly detection ──
     print("\n--- Task 3: Anomaly detection ---")
@@ -367,6 +414,24 @@ def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cp
     print(f"  Recall:                    {task3_metrics['recall']:.4f}")
     print(f"  F1:                        {task3_metrics['f1']:.4f}")
     print(f"  Rule Attribution Accuracy: {task3_metrics['rule_attribution_accuracy']:.4f}")
+    if task3_metrics.get("roc_auc") is not None:
+        print(f"  ROC-AUC:                   {task3_metrics['roc_auc']:.4f}")
+
+    # ── Per-family breakdown (spec requires it) ──
+    print("\n--- Per-family breakdown ---")
+    for fam in ("MOSFET", "IGBT", "IC"):
+        vr = [r for r in valid_rows if r["FAMILY"] == fam]
+        vids = {r["EXAMPLE_ID"] for r in vr}
+        ar = [r for r in anomaly_rows if r["FAMILY"] == fam]
+        aids = {r["EXAMPLE_ID"] for r in ar}
+        m1 = compute_nextstep_metrics([p for p in task1_preds if p["EXAMPLE_ID"] in vids], vr)
+        m2 = compute_completion_metrics([p for p in task2_preds if p["EXAMPLE_ID"] in vids], vr)
+        m3 = compute_anomaly_metrics([p for p in task3_preds if p["EXAMPLE_ID"] in aids], ar)
+        auc = m3.get("roc_auc")
+        print(f"  {fam:<7} T1 Top1={m1['top1_accuracy']:.3f} Top5={m1['top5_accuracy']:.3f} "
+              f"MRR={m1['mrr']:.3f} | T2 Exact={m2['exact_match_rate']:.3f} "
+              f"Block={m2['block_accuracy']:.3f} EditD={m2['normalized_edit_distance']:.3f} | "
+              f"T3 F1={m3['f1']:.3f} AUC={auc if auc is None else round(auc,3)}")
 
     # ── Save results ──
     all_metrics = {

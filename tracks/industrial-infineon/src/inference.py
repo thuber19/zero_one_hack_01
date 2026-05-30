@@ -17,6 +17,18 @@ from tokenizer import StepTokenizer, FAMILY_TOKENS, BOS_ID, EOS_ID, PAD_ID
 from transformer_model import create_model, ProcessTransformer
 from random_forest import StepCandidateForest
 
+# ── Physics integration (the merged symbolic harness) ──────────────────────
+# Make the harness importable: it lives one level up from src/.
+import sys as _sys
+from pathlib import Path as _Path
+_SUBROOT = _Path(__file__).resolve().parent.parent
+for _p in (str(_SUBROOT), str(_SUBROOT / "training_data")):
+    if _p not in _sys.path:
+        _sys.path.insert(0, _p)
+from physics.state_machine import validate_sequence_combined
+from refinery import PhysicsRefinery, _ranked as _refinery_ranked
+import fix as _fix
+
 
 class ProcessPredictor:
     """
@@ -37,15 +49,33 @@ class ProcessPredictor:
         self.model = model.to(device).eval()
         self.rf = rf
         self.device = device
+        # Physics layer: model proposes, physics disposes. category_mode="off"
+        # = pure physical legality (no learned-grammar dependency), safe for OOD.
+        self.refinery = PhysicsRefinery(category_mode="off")
 
     @classmethod
     def load(cls, output_dir: Path, model_size: str = "small", device: str = "cpu"):
-        """Load all components from saved outputs."""
+        """Load all components from saved outputs.
+
+        Robustness: reads the model size from model_config.json when present (so
+        the architecture always matches the checkpoint — avoids a shape-mismatch
+        crash), and tolerates a missing random_forest.pkl (inference then runs on
+        transformer + physics alone instead of failing on a clean checkout)."""
+        import json
         tokenizer = StepTokenizer.load(output_dir / "tokenizer.txt")
+        cfg = output_dir / "model_config.json"
+        if cfg.exists():
+            try:
+                model_size = json.loads(cfg.read_text()).get("model_size", model_size)
+            except Exception:
+                pass
         model = create_model(tokenizer.vocab_size, size=model_size)
-        model.load_state_dict(torch.load(output_dir / "best_transformer.pt", map_location=device, weights_only=True))
+        model.load_state_dict(torch.load(
+            output_dir / "best_transformer.pt", map_location=device, weights_only=True))
         rf = StepCandidateForest()
-        rf.load(output_dir / "random_forest.pkl", tokenizer)
+        rf_path = output_dir / "random_forest.pkl"
+        if rf_path.exists():
+            rf.load(rf_path, tokenizer)
         return cls(tokenizer, model, rf, device)
 
     def _encode_partial(self, steps: list[str], family: str) -> tuple[torch.Tensor, torch.Tensor]:
@@ -75,6 +105,7 @@ class ProcessPredictor:
         family: str,
         top_k: int = 5,
         use_rf_mask: bool = True,
+        use_physics: bool = True,
     ) -> list[tuple[str, float]]:
         """
         Predict the top-K most likely next steps.
@@ -102,12 +133,23 @@ class ProcessPredictor:
             if prob_sum > 0:
                 probs = probs / prob_sum
 
-        # Get top-K
-        topk_probs, topk_ids = torch.topk(probs, min(top_k, len(probs)))
-        results = []
+        # Pull a larger candidate pool so physics can re-rank within it.
+        pool = max(top_k, 15) if use_physics else top_k
+        topk_probs, topk_ids = torch.topk(probs, min(pool, len(probs)))
+        cand = []
         for prob, tid in zip(topk_probs.cpu().tolist(), topk_ids.cpu().tolist()):
-            step_name = self.tokenizer.id2token.get(tid, "[UNK]")
-            results.append((step_name, prob))
+            cand.append((self.tokenizer.id2token.get(tid, "[UNK]"), prob))
+
+        if use_physics:
+            # model proposes -> physics floats legal next-steps up (model order
+            # preserved among legal ones), illegal demoted but never dropped.
+            prob_of = {n: p for n, p in cand}
+            names = [n for n, _ in cand
+                     if not (n.startswith("[") and n.endswith("]"))]
+            reranked = self.refinery.rerank(steps, names, k=top_k)
+            results = [(n, prob_of.get(n, 0.0)) for n in reranked]
+        else:
+            results = cand[:top_k]
 
         return results
 
@@ -119,34 +161,47 @@ class ProcessPredictor:
         family: str,
         max_new_steps: int = 80,
         use_rf_mask: bool = True,
+        use_physics: bool = True,
     ) -> list[str]:
         """
         Autoregressively complete a partial sequence.
 
+        With use_physics, the model is the proposal distribution and the physics
+        refinery vetoes any step that would create a rule violation, detects
+        loops, and guarantees clean termination — so the completion is ALWAYS
+        physically valid, even on an unseen family.
+
         Returns only the NEW steps (after the partial sequence).
         """
+        if use_physics:
+            def score_fn(steps_so_far):
+                preds = self.predict_next_steps(
+                    steps_so_far, family, top_k=15,
+                    use_rf_mask=use_rf_mask, use_physics=False,
+                )
+                return [n for n, _ in preds
+                        if not (n.startswith("[") and n.endswith("]"))]
+            return self.refinery.constrained_decode(
+                partial_steps, score_fn, beam=15, max_steps=max_new_steps)
+
+        # ── baseline (no physics): plain greedy, for ablation ──
         current_steps = list(partial_steps)
         new_steps = []
-
         for _ in range(max_new_steps):
             predictions = self.predict_next_steps(
-                current_steps, family, top_k=1, use_rf_mask=use_rf_mask
+                current_steps, family, top_k=1, use_rf_mask=use_rf_mask,
+                use_physics=False,
             )
             if not predictions:
                 break
-
             next_step, prob = predictions[0]
-
-            # Stop conditions
             if next_step in ("[EOS]", "[PAD]", "[UNK]"):
                 break
             if next_step == "SHIP LOT":
                 new_steps.append(next_step)
                 break
-
             new_steps.append(next_step)
             current_steps.append(next_step)
-
         return new_steps
 
     # ── Task 3: Anomaly detection ─────────────────────────────────────────
@@ -155,6 +210,7 @@ class ProcessPredictor:
         self,
         steps: list[str],
         family: str,
+        use_physics: bool = True,
     ) -> dict:
         """
         Score a sequence for anomalies using two signals:
@@ -198,29 +254,47 @@ class ProcessPredictor:
                         "context": steps[max(0, t - 2):t + 2],
                     })
 
-        # Signal 3: Rule-based validator (ground truth rules)
-        from generate_sequences import validate_sequence
-        rule_violations = validate_sequence(steps)
+        # Signal 3: physics rule validator. validate_sequence_combined is EXACT
+        # for the three known families AND generalises to unseen vocabulary via
+        # category reasoning — unlike the name-based checker — so it covers the
+        # hidden 4th family (Task 4). This is the authoritative signal.
+        if use_physics:
+            rule_violations = validate_sequence_combined(steps)
+        else:
+            from generate_sequences import validate_sequence
+            rule_violations = validate_sequence(steps)
         has_rule_violation = len(rule_violations) > 0
         predicted_rule = rule_violations[0].rule if rule_violations else ""
 
-        # Combine all signals
-        # Rule validator is the strongest signal — if it fires, it's definitely invalid
-        # RF violations and high loss are softer signals for unknown violations
+        # The 10 rules ARE the definition of invalid, so the validator is
+        # authoritative. The model loss / RF only modulate the SCORE (= P valid)
+        # to separate the classes for ROC-AUC.
         if has_rule_violation:
             is_valid = False
-            combined_score = 0.0
+            combined_score = 0.02
         else:
-            # Use loss + RF for cases the validator might miss
             loss_score = max(0.0, 1.0 - avg_loss / 3.0)
             rf_score = 1.0 if len(rf_violations) == 0 else max(0.0, 1.0 - len(rf_violations) * 0.2)
-            combined_score = 0.5 * loss_score + 0.5 * rf_score
-            is_valid = combined_score > 0.4
+            combined_score = max(0.85, 0.5 * loss_score + 0.5 * rf_score)
+            is_valid = True
+
+        # Detect -> explain -> repair: attach the physical reason and concrete
+        # fix for every violation (drives the demo and the engineer-facing UX).
+        explanation = ""
+        suggested_fixes = []
+        if has_rule_violation and use_physics:
+            findings = _fix.analyze(steps).get("findings", [])
+            if findings:
+                explanation = findings[0].why
+                suggested_fixes = [f.fix_description for f in findings]
 
         return {
             "is_valid": is_valid,
             "score": round(combined_score, 4),
             "predicted_rule": predicted_rule,
+            "explanation": explanation,
+            "suggested_fixes": suggested_fixes,
+            "all_violations": sorted({v.rule for v in rule_violations}),
             "avg_loss": avg_loss,
             "n_rf_violations": len(rf_violations),
             "n_rule_violations": len(rule_violations),
@@ -352,15 +426,15 @@ def generate_all_submissions(
 
     if eval_valid.exists():
         print("\n--- Task 1: Next-step prediction ---")
-        generate_task1_submission(predictor, eval_valid, submission_dir / "task1_nextstep.csv")
+        generate_task1_submission(predictor, eval_valid, submission_dir / "nextstep.csv")
         print("\n--- Task 2: Sequence completion ---")
-        generate_task2_submission(predictor, eval_valid, submission_dir / "task2_completion.csv")
+        generate_task2_submission(predictor, eval_valid, submission_dir / "completion.csv")
     else:
         print(f"  Eval file not found: {eval_valid}")
 
     if eval_anomaly.exists():
         print("\n--- Task 3: Anomaly detection ---")
-        generate_task3_submission(predictor, eval_anomaly, submission_dir / "task3_anomaly.csv")
+        generate_task3_submission(predictor, eval_anomaly, submission_dir / "anomaly.csv")
     else:
         print(f"  Eval file not found: {eval_anomaly}")
 
