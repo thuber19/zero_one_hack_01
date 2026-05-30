@@ -19,23 +19,21 @@ submit_procseq() {
     read -p "Max training steps [4000]: "                 PSTEPS; PSTEPS="${PSTEPS:-4000}"
     read -p "Batch size [64]: "                           PBATCH; PBATCH="${PBATCH:-64}"
 
-    local SOL="$HOME/process-sequence-model/solution"
-    local VENV="${VENV:-$HOME/procseq-venv}"
+    local PROJECT_DIR="$HOME/process-sequence-model"
+    local SOL="$PROJECT_DIR/solution"
+    local PIXI="$HOME/.pixi/bin/pixi"
     local OUTNAME="procseq_${WHICH}_${PSIZE}_d${PDATA}_s${PSTEPS}"
     local OUTDIR="${SCRATCH:-$HOME}/runs/${OUTNAME}"
     local CFG="${SOL}/configs/_run_${WHICH}.yaml"
 
     if [ ! -d "$SOL" ]; then
-        echo "ERROR: $SOL not found."
-        echo "Check out the procseq-pipeline branch into \$HOME/process-sequence-model."
+        echo "ERROR: $SOL not found. Check out the branch with solution/ into $PROJECT_DIR."
         exit 1
     fi
 
-    # One-time venv build on the LOGIN node (compute nodes have no internet).
-    if [ ! -x "$VENV/bin/python" ]; then
-        echo "procseq venv missing -> building at $VENV (login node, ~5 min)..."
-        ( cd "$SOL" && VENV="$VENV" bash setup_leonardo.sh ) || { echo "venv setup failed"; exit 1; }
-    fi
+    # Build the 'procseq' pixi environment on the LOGIN node (compute nodes have no internet).
+    echo "Installing the 'procseq' pixi environment (login node, one-time, ~5 min)..."
+    "$PIXI" install --manifest-path "$PROJECT_DIR/pixi.toml" -e procseq || { echo "pixi install failed"; exit 1; }
 
     mkdir -p "$OUTDIR"
 
@@ -72,7 +70,7 @@ YAML
     echo ""
     echo "============================================"
     echo "  procseq ${WHICH} | size=${PSIZE} | ${PDATA}/family | ${PSTEPS} steps | bs=${PBATCH}"
-    echo "  venv:   ${VENV}"
+    echo "  env:    pixi -e procseq"
     echo "  output: ${OUTDIR}"
     echo "============================================"
     read -p "Submit? [Y/n]: " C; C="${C:-Y}"
@@ -94,26 +92,24 @@ YAML
 #SBATCH --error=slurm-${OUTNAME}-%j.err
 
 set -e
-source "${VENV}/bin/activate"
+RUN="${PIXI} run --as-is --manifest-path ${PROJECT_DIR}/pixi.toml -e procseq env PYTHONUNBUFFERED=1 TOKENIZERS_PARALLELISM=false PYTHONPATH=${SOL} PROCSEQ_ARTIFACTS=${OUTDIR}"
 cd "${SOL}"
-export PYTHONUNBUFFERED=1 TOKENIZERS_PARALLELISM=false
-export PROCSEQ_ARTIFACTS="${OUTDIR}"
 echo "node=\$(hostname) gpu=\$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo N/A) start=\$(date)"
 
-python -m procseq.build_data --n-per-family ${PDATA} --seed 42
+\$RUN python -m procseq.build_data --n-per-family ${PDATA} --seed 42
 
 if [ "${WHICH}" = "decoder" ]; then
-  srun accelerate launch --num_processes 1 -m procseq.train_decoder --config "${CFG}"
-  python -m procseq.infer --task 1 --config "${CFG}"
-  python -m procseq.infer --task 2 --config "${CFG}"
-  python -m procseq.run_eval --config "${CFG}"
-  python -m procseq.infer --task 1 --real --config "${CFG}"
-  python -m procseq.infer --task 2 --real --config "${CFG}"
+  \$RUN accelerate launch --num_processes 1 -m procseq.train_decoder --config "${CFG}"
+  \$RUN python -m procseq.infer --task 1 --config "${CFG}"
+  \$RUN python -m procseq.infer --task 2 --config "${CFG}"
+  \$RUN python -m procseq.run_eval --config "${CFG}"
+  \$RUN python -m procseq.infer --task 1 --real --config "${CFG}"
+  \$RUN python -m procseq.infer --task 2 --real --config "${CFG}"
 else
-  srun accelerate launch --num_processes 1 -m procseq.train_encoder --config "${CFG}"
-  python -m procseq.infer --task 3 --config "${CFG}"
-  python -m procseq.run_eval --config "${CFG}"
-  python -m procseq.infer --task 3 --real --config "${CFG}"
+  \$RUN accelerate launch --num_processes 1 -m procseq.train_encoder --config "${CFG}"
+  \$RUN python -m procseq.infer --task 3 --config "${CFG}"
+  \$RUN python -m procseq.run_eval --config "${CFG}"
+  \$RUN python -m procseq.infer --task 3 --real --config "${CFG}"
 fi
 
 echo "=== DONE \$(date) ==="
