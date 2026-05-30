@@ -197,6 +197,117 @@ make smoke          # runs the whole pipeline tiny → proves it connects
 
 ---
 
+## 9. procseq vs. your colleague's LSTM — the detailed difference
+
+This is the question everyone will ask, so here it is in depth. Two axes differ:
+**(A) the kind of neural network**, and **(B) the overall philosophy of the pipeline.**
+
+### A. The network itself: LSTM vs. Transformer
+
+Both read a recipe and predict the next step. *How* they read it is the whole difference.
+
+**His model — an LSTM (`src/lstm_model.py`)**
+```
+Embedding → LSTM (2–3 layers) → LayerNorm → Linear → next-step probabilities
+sizes: tiny 128-dim/2-layer (~200K) · small 256/2 (~1.5M) · medium 512/3 (~10M)
+```
+An **LSTM (Long Short-Term Memory)** is a *recurrent* network. It walks the recipe
+**one step at a time, left to right**, and carries a fixed-size "memory cell" that it
+updates at every step. Think of someone reading a 150-step recipe out loud and trying
+to remember everything important in their head as they go.
+
+- **Strength:** simple, small, fast, very stable to train (his medium is only ~6–10M params).
+- **Weakness:** that memory is a *single fixed-size vector*. By step 140, the details
+  of step 3 are squeezed and faded. For a rule like "a CLEAN must have happened before
+  this DEPOSIT, up to 12 steps back," a long recipe strains the memory. LSTMs process
+  steps **sequentially**, so they're also harder to parallelize.
+
+**Your model — a Transformer (`solution/procseq/models/decoder.py`, `encoder.py`)**
+```
+decoder (writer): Llama-style — token+rotary-position embeddings → causal self-ATTENTION
+                  blocks (SwiGLU) → next-step probabilities      (tasks 1 & 2)
+encoder (judge):  DeBERTa-style — disentangled (content+position) ATTENTION → valid/invalid
+                  + which-of-10-rules                            (task 3)
+```
+A **Transformer** has no running memory cell. Instead, every step can **directly look
+at every other step at once** via *attention* — at each position the model computes
+"how relevant is each earlier step to what I'm predicting now?" and pulls exactly the
+ones it needs. So "is there a CLEAN in the last 12 steps?" is a direct lookup, not a
+fuzzy recollection.
+
+- **Strength:** excellent at **long-range, order-sensitive** dependencies — exactly
+  what process logic is. It's the architecture behind GPT/Llama (your decoder) and
+  BERT/DeBERTa (your encoder). Trains in parallel across all positions.
+- **Cost:** more parameters and compute; attention is O(n²) in sequence length (fine
+  here — recipes are ~150 tokens).
+
+**One-sentence version:** *an LSTM remembers the past in a fading summary; a
+Transformer can re-read the whole past instantly and decide what matters.*
+
+| | His LSTM | Your Transformer |
+|---|---|---|
+| Mechanism | recurrence + memory cell | **attention** (look at all steps) |
+| Long-range rule (clean→deposit 12 steps back) | fuzzy / fades | direct lookup |
+| Position handling | implicit (reading order) | explicit (rotary / disentangled position) |
+| Parallel training | no (sequential) | yes |
+| Lineage | 1997, pre-deep-learning-boom | 2017 "Attention is All You Need" (GPT/BERT) |
+
+### B. The pipeline philosophy: model-as-helper vs model-as-brain
+
+This matters even more than the architecture.
+
+**His design — one model, then rules do the heavy lifting.**
+The LSTM only proposes next-step candidates. The real decisions are made by two
+**hand-built, non-neural** components bolted on top:
+- a **Random Forest** that filters which candidate steps are plausible, and
+- a **physics rule engine** (`physics/`) that reranks (task 1), beam-searches with rule
+  veto + repair to *guarantee* a valid completion (task 2), and *is* the anomaly
+  detector (task 3, essentially the grader's own checker).
+
+So in his pipeline the **intelligence is largely in code he wrote** (the rules), and
+the LSTM is a constrained suggester. It's robust and scores well, but it leans on the
+rulebook.
+
+**Your design — two specialized models that learn the logic themselves.**
+- a **decoder** that generates (tasks 1 & 2), with grammar-veto only as a *thin safety net*, and
+- a **separate encoder** that *learned* to judge validity (task 3), trained with a
+  **contrastive** objective on valid/broken "twin" recipes so it learns the *reason*
+  for invalidity — not a hand-written rule in sight at training time.
+
+So in your pipeline the **intelligence is in the trained weights**, and the rules are
+only a backstop. That's a different bet entirely.
+
+| | His pipeline (LSTM + physics) | Your pipeline (procseq) |
+|---|---|---|
+| # models | 1 LSTM (+ Random Forest + rules) | 2 Transformers (decoder + encoder) |
+| Task 3 anomaly | deterministic rule engine | a **learned** classifier + contrastive |
+| Task 2 completion | physics **beam search + repair** → guaranteed valid | decoder + grammar veto → valid, simpler |
+| Where the "logic" lives | in **rules he wrote** | in the **model's learned weights** |
+| Generalization to hidden family | via category heuristic in the rules | via what the network learned (measured by your OOD probe) |
+| Training | per-epoch, early stopping (+ optional GRPO/RL) | step-based Accelerate, contrastive + grammar-constrained |
+
+### C. Why you ended up "so different" from him
+
+You each optimized for a different goal, and both are valid:
+
+- **He optimized for a guaranteed-correct, high-scoring submission.** An LSTM is a
+  safe, cheap suggester; his physics engine makes the output *provably legal*. Hard to
+  beat on raw Task-2/Task-3 score — but a judge could fairly say "the rules are doing
+  the work, not the model."
+- **You optimized for the hackathon's actual research question** — *can a model
+  **learn** process logic (not memorize), and generalize?* So you used modern
+  transformers that learn the grammar, and you **measured** whether they did (the logic
+  probe, category-level accuracy, leave-one-family-out OOD, n-gram-floor vs
+  rule-ceiling baselines). Riskier on raw score, but it's the credible "the AI
+  understood it" story — and judges explicitly reward honest evaluation.
+
+That's why the two are **complementary, not rivals**: his guarantees correctness, yours
+demonstrates learning. The strongest submission uses **his** rule-guaranteed outputs
+where they win on score, and **your** results to prove the models genuinely learned the
+logic and generalize. (See `../PIPELINES.md`.)
+
+---
+
 ## TL;DR
 
 You built **procseq**: a from-scratch, two-model ML pipeline (a "writer" decoder for
@@ -205,3 +316,8 @@ step-level tokenizer, with grammar-constrained decoding, contrastive learning, a
 honest self-scoring harness, OOD + scaling experiments, and full Leonardo/pixi
 plumbing. It answers the hackathon's core question — *did the model learn the
 process logic?* — with measurements, not hand-waving.
+
+**Versus your colleague:** he uses an **LSTM** (an older memory-chain network) wrapped
+in **hand-written rules** that do the heavy lifting; you use modern **Transformers**
+that **learn the logic themselves** and then prove they did. Same data, same goal,
+opposite bets — his guarantees correctness, yours demonstrates understanding.
