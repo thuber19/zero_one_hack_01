@@ -72,8 +72,9 @@ def main(argv=None):
     dl = DataLoader(ds, batch_size=dc.get("batch_size", 4), sampler=sampler,
                     collate_fn=partial(clm_collate, pad_id=tok.pad_token_id))
     opt = torch.optim.AdamW(model.parameters(), lr=dc.get("lr", 3e-3))
-
     max_steps = dc.get("max_steps", 5)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max_steps, eta_min=1e-6)
+
     log_every = dc.get("log_every", 25)
     eval_every = dc.get("eval_every", 250)
     n_params = sum(p.numel() for p in model.parameters())
@@ -97,7 +98,7 @@ def main(argv=None):
     while step < max_steps:
         for batch in dl:
             out = model(**batch); loss = out.loss
-            acc.backward(loss); opt.step(); opt.zero_grad()
+            acc.backward(loss); opt.step(); opt.zero_grad(); scheduler.step()
             run_loss += loss.item()
             acc.log({"train/loss": loss.item()}, step=step)
             step += 1
