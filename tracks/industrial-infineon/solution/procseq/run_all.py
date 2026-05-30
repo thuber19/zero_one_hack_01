@@ -109,18 +109,39 @@ def main(argv=None):
     print("\n===== INFERENCE + SELF-EVAL (mirrors) =====", flush=True)
     from procseq import infer, infer_hybrid, infer_anomaly_hybrid, run_eval, score_official
     infer.run_task1(cfg); infer.run_task2(cfg); infer.run_task3(cfg)
-    infer_hybrid.run_hybrid(cfg)
-    infer_anomaly_hybrid.run(cfg)
     run_eval.main(["--config", cfg_path])
-    print("\n===== OFFICIAL SCORES (pure vs physics-hybrid) =====", flush=True)
-    score_official.main(["--config", cfg_path])
 
     # 4) real submissions from the organizer-format eval files
     if not a.no_real:
         print("\n===== REAL SUBMISSIONS =====", flush=True)
         infer.run_task1(cfg, real=True); infer.run_task2(cfg, real=True); infer.run_task3(cfg, real=True)
-        infer_hybrid.run_hybrid(cfg, real=True)
-        infer_anomaly_hybrid.run(cfg, real=True)
+
+        # Rename to final submission format: nextstep.csv, completion.csv, anomaly.csv
+        art_p = Path(art)
+        for src_name, dst_name in [
+            ("submission_task1_real.csv", "nextstep.csv"),
+            ("submission_task2_real.csv", "completion.csv"),
+            ("submission_task3_real.csv", "anomaly.csv"),
+        ]:
+            src_f = art_p / src_name
+            dst_f = art_p / dst_name
+            if src_f.exists():
+                import shutil
+                shutil.copy2(src_f, dst_f)
+                print(f"  {src_name} -> {dst_name}", flush=True)
+        print(f"\nFinal submission files in: {art}", flush=True)
+
+    # 5) hybrid: physics rerank for task 1+3 (fast), skip task 2 beam decode (slow)
+    try:
+        from procseq import infer_hybrid, infer_anomaly_hybrid
+        print("\n===== HYBRID (tasks 1+3 only, skipping task 2 beam-decode) =====", flush=True)
+        infer_hybrid.run_hybrid_task1_only(cfg)
+        infer_anomaly_hybrid.run(cfg)
+        if not a.no_real:
+            infer_hybrid.run_hybrid_task1_only(cfg, real=True)
+            infer_anomaly_hybrid.run(cfg, real=True)
+    except Exception as e:
+        print(f"  Hybrid step failed (non-fatal): {e}", flush=True)
 
     print(f"\n===== DONE in {time.time()-t0:.0f}s =====", flush=True)
     print(f"artifacts: {cfg.get('artifacts')}", flush=True)

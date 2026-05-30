@@ -106,12 +106,38 @@ def run_hybrid(cfg, real=False, limit=None):
         fam = r["FAMILY"]
         def score_fn(pfx, _fam=fam):
             return _probs_pairs(model, tok, pfx, _fam, k=20)
-        comp = refinery.beam_decode(steps, score_fn, beam=5, max_steps=max_new)
+        comp = refinery.beam_decode(steps, score_fn, beam=3, branch=5, max_steps=80)
         t2.append([r["EXAMPLE_ID"], "|".join(comp)])
         if i % 100 == 0 or i == len(rows):
             print(f"    task2 {i}/{len(rows)}", flush=True)
     _write(art / f"submission_task2_hybrid{suf}.csv",
            ["EXAMPLE_ID", "PREDICTED_SEQUENCE"], t2)
+
+
+def run_hybrid_task1_only(cfg, real=False, limit=None):
+    """Only Task 1 reranking (fast). Skips Task 2 beam decode."""
+    refinery = _ref.PhysicsRefinery(category_mode="off")
+    tok = load_tokenizer(Path(cfg["decoder_ckpt"]))
+    model = _load_decoder(cfg["decoder_ckpt"]); model.eval()
+    art = Path(cfg["artifacts"])
+    if real:
+        src = Path(grammar.TRAINING_DATA_DIR) / "eval_input_valid.csv"; suf = "_real"
+    else:
+        src = art / "eval_input_valid.csv"; suf = ""
+    with src.open() as f:
+        rows = list(csv.DictReader(f))
+    if limit:
+        rows = rows[:limit]
+
+    t1 = []
+    for r in rows:
+        steps = r["PARTIAL_SEQUENCE"].split("|")
+        ranked = _ranked_names(model, tok, steps, r["FAMILY"], k=15)
+        refined = refinery.rerank(steps, ranked, k=5)
+        refined += [""] * (5 - len(refined))
+        t1.append([r["EXAMPLE_ID"], *refined[:5]])
+    _write(art / f"submission_task1_hybrid{suf}.csv",
+           ["EXAMPLE_ID", "RANK_1", "RANK_2", "RANK_3", "RANK_4", "RANK_5"], t1)
 
 
 def main(argv=None):

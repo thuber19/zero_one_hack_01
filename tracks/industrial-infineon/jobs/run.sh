@@ -167,13 +167,7 @@ export PYTHONUNBUFFERED=1 TOKENIZERS_PARALLELISM=false
 RUN="${PIXI} run --as-is --manifest-path ${PROJECT_DIR}/pixi.toml -e procseq env PYTHONUNBUFFERED=1 TOKENIZERS_PARALLELISM=false PYTHONPATH=${SOL} PROCSEQ_ARTIFACTS=${OUTDIR}"
 cd "${SOL}"
 echo "GPU: \$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo N/A)"
-\$RUN python3 -m procseq.build_data --n-per-family ${PDATA} --seed 42
-\$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_decoder --config "${CFG}"
-\$RUN python3 -m procseq.infer --task 1 --config "${CFG}"
-\$RUN python3 -m procseq.infer --task 2 --config "${CFG}"
-\$RUN python3 -m procseq.run_eval --config "${CFG}"
-\$RUN python3 -m procseq.infer --task 1 --real --config "${CFG}"
-\$RUN python3 -m procseq.infer --task 2 --real --config "${CFG}"
+\$RUN python3 -m procseq.run_all --config "${CFG}"
 echo "=== DONE ==="
 echo "Submissions: ${OUTDIR}/submission_task*_real.csv"
 EOF
