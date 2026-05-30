@@ -43,6 +43,33 @@ black box.
   **pseudo-families** with novel vocabulary (`pseudo_family.py`) for OOD training
   and self-measured ID→OOD.
 
+## Why next-step accuracy plateaus at ~81% — and what we optimize instead
+Key finding (see `CEILING_ANALYSIS.md`; reproduce with `oracle_ceiling.py`):
+next-step accuracy converges to ~0.81 across every model size and epoch count
+because that is the **information-theoretic ceiling**. The synthetic generator
+makes *random valid choices* (documented synonyms like `STRIP PHOTORESIST`↔`STRIP
+RESIST`, and optional steps) at ~half of all positions, so the **best predictor
+that can possibly exist** caps at **Top-1 ≈ 0.82 / Top-5 = 1.000** — measured
+model-independently from the data (0% duplicate sequences → no leakage). Our
+models sit at ~98% of that ceiling. So next-token Top-1 is a *saturated* metric;
+we optimize the signals that are **not** at their ceiling — **Task-2 completion**,
+**Task-4 OOD**, the verified **physics layer** — and report **Top-5 / MRR** for T1.
+
+## How the model *internalizes* the rules (training injections)
+Beyond next-token LM, training (`src/train.py` → `jobs/leonardo/train.slurm`) adds:
+- **Next-category auxiliary head** (`--aux-category`) — predicts each step's
+  physical *function*, a low-entropy target that transfers OOD (`category_eval.py`).
+- **UNK-dropout** (`--unk-dropout`) — masks context so the model relies on
+  structure, not memorized names.
+- **Synonym-collapse loss** (`--synonym-collapse`, `physics/synonyms.py`) — a
+  group-marginal loss crediting any synonym of the gold step, so the gradient stops
+  wasting signal on coin-flips (outputs stay exact; grader unaffected).
+- **Pseudo-family OOD augmentation** (`generate_data.py --ood`, novelty spectrum).
+- **GRPO with the physics verifier as reward** (`src/train_grpo.py`) — pushes the
+  constraints into the weights, not just the engine.
+- **Task-2 physics-vetoed beam search** (`refinery.beam_decode`) — lower edit
+  distance than greedy while staying provably valid.
+
 ## How to run it
 ```bash
 # 1) Physics harness — pure stdlib, runs anywhere, no install:
