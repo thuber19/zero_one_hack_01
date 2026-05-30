@@ -10,7 +10,12 @@ export default function OptimizerPage() {
   return (
     <div className="space-y-4">
       <ErrorBanner />
-      <h1 className="text-white font-mono text-lg">Sequence Optimizer</h1>
+      <div>
+        <h1 className="text-white font-bold text-xl">Step Optimizer</h1>
+        <p className="text-white/40 text-xs font-mono mt-0.5">
+          Drag steps to reorder — the AI re-scores the sequence live to show how order affects quality
+        </p>
+      </div>
       <div className="bg-[#0d1426] rounded-lg p-4 border border-white/10">
         <SequenceOptimizer steps={steps} />
       </div>

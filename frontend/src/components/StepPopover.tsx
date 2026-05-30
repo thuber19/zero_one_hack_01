@@ -1,6 +1,6 @@
 import ReactDOM from 'react-dom'
 import type { Step } from '../types/api'
-import { humanize } from '../lib/featureNameMap'
+import { stepDescription } from '../lib/stepDescriptions'
 
 interface Props {
   step: Step
@@ -10,47 +10,64 @@ interface Props {
 }
 
 export default function StepPopover({ step, x, y }: Props) {
-  const top3Shap = [...(step.shap ?? [])].sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution)).slice(0, 3)
+  const desc = stepDescription(step.step_name)
+  const riskPct = Math.round(step.risk_score * 100)
+  const isHighRisk = step.risk_score >= 0.85
+  const isMedRisk = step.risk_score >= 0.70
 
   const content = (
     <div
       style={{
         position: 'fixed',
         left: x,
-        top: y - 8,
+        top: y - 12,
         transform: 'translate(-50%, -100%)',
         zIndex: 9999,
         pointerEvents: 'none',
       }}
-      className="bg-[#111827] border border-white/20 rounded-lg p-3 shadow-xl min-w-[220px] max-w-[280px]"
+      className="bg-[#0d1830] border border-white/20 rounded-xl p-3 shadow-2xl min-w-[240px] max-w-[320px]"
     >
-      <div className="text-accent font-mono text-xs font-bold mb-2">{step.step_name}</div>
-      <div className="text-white/50 text-xs font-mono mb-1">
-        CI: [{step.confidence_lo.toFixed(3)}, {step.confidence_hi.toFixed(3)}]
-      </div>
-      {step.sensors && Object.entries(step.sensors).slice(0, 2).map(([k, v]) => (
-        <div key={k} className="text-white/60 text-xs font-mono">
-          {humanize(k)}: <span className="text-white">{typeof v === 'number' ? v.toFixed(2) : v}</span>
-        </div>
-      ))}
-      {top3Shap.length > 0 && (
-        <div className="mt-2 border-t border-white/10 pt-2">
-          <div className="text-white/40 text-xs mb-1">SHAP Top 3</div>
-          {top3Shap.map((s) => (
-            <div key={s.feature} className="flex justify-between text-xs font-mono">
-              <span className="text-white/70 truncate">{humanize(s.feature)}</span>
-              <span className={s.contribution > 0 ? 'text-yield-green ml-2' : 'text-risk-red ml-2'}>
-                {s.contribution > 0 ? '+' : ''}{s.contribution.toFixed(3)}
-              </span>
-            </div>
-          ))}
-        </div>
+      {/* Step name */}
+      <div className="font-mono text-sm font-bold text-white mb-1">{step.step_name}</div>
+
+      {/* Real description from CSV */}
+      {desc && (
+        <div className="text-white/60 text-xs leading-relaxed mb-2">{desc}</div>
       )}
-      <div className="mt-2 text-xs font-mono">
-        Risk: <span className={step.risk_score >= 0.85 ? 'text-risk-red' : step.risk_score >= 0.70 ? 'text-risk-amber' : 'text-white/50'}>
-          {step.risk_score.toFixed(3)}
-        </span>
+
+      {/* Risk score */}
+      <div className="flex items-center gap-2 mt-1">
+        <div
+          className="text-xs font-mono font-bold px-2 py-0.5 rounded"
+          style={{
+            backgroundColor: isHighRisk ? '#ff444422' : isMedRisk ? '#ffaa0022' : '#1e2a3a',
+            color: isHighRisk ? '#ff4444' : isMedRisk ? '#ffaa00' : '#ffffff60',
+            border: `1px solid ${isHighRisk ? '#ff444440' : isMedRisk ? '#ffaa0040' : 'transparent'}`,
+          }}
+        >
+          {riskPct}% anomaly score
+        </div>
+        {(isHighRisk || isMedRisk) && (
+          <span className="text-xs font-mono text-white/30">
+            ±{Math.round((step.confidence_hi - step.confidence_lo) * 50)}%
+          </span>
+        )}
       </div>
+
+      {/* Arrow */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: -5,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 10,
+          height: 10,
+          backgroundColor: '#0d1830',
+          border: '1px solid rgba(255,255,255,0.2)',
+          clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
+        }}
+      />
     </div>
   )
 
