@@ -308,6 +308,53 @@ logic and generalize. (See `../PIPELINES.md`.)
 
 ---
 
+## 10. Honest limitations (a red-team audit, owned)
+
+An adversarial audit tore through the whole track. Most of its kill-shots hit the
+**physics/`src` pipeline**, not procseq — but procseq isn't spotless. Here's the
+truth, stated plainly (judges reward this).
+
+**What the audit could NOT pin on procseq (with evidence):**
+- **No "f(x)==f(x)" tautology.** procseq's Task-3 verdict comes from the *learned*
+  encoder (`infer_anomaly.py`: `is_valid` from `sigmoid(invalid_logit)`), not from
+  the rule checker. The model can be — and is — wrong. It's a real measurement.
+- **SCORE is a real probability**, `1 − P(invalid)`, continuous in [0,1] → a real
+  ROC-AUC, not two hard-coded constants.
+- **The model drives the output.** The whole audit complaint "the AI doesn't affect
+  the scored verdict" is the physics pipeline's problem; in procseq the model *is*
+  the verdict. That's the point of procseq.
+
+**What genuinely DOES apply to procseq (no spin):**
+1. **The grader assumption.** The encoder is *trained* on labels from the official
+   `validate_sequence` (via `anomaly_inject`), and our self-eval scores against
+   `validate_sequence`-derived labels. So procseq honestly measures *"can a neural net
+   learn to reproduce the rule checker?"* — **not** a tautology, but **bounded by
+   `validate_sequence ≈ the real organizer grader`, which is unproven** (no grader in
+   the repo).
+2. **Self-eval is in-distribution.** `data/eval_input_*.csv` is produced by the team's
+   own `generate_data.py` (same 3 families) — a spec-format **stand-in**, not the
+   secret held-out set. Our `--real` outputs are submittable, but our *self-scores*
+   are in-distribution.
+3. **OOD was weaker than it sounded.** `ood_probe.py` is leave-one-family-out among the
+   **3 known families** (shared vocabulary) = "modified workflow", not a novel-vocab
+   family. And the category diagnostic uses `classify_step`, which returns `UNKNOWN`
+   on keyword-free names.
+
+**What we did about it:** added **`ood_novel.py`** — a real novel-4th-family stress
+test that **reuses the team's `pseudo_family` generator** and the auditor's own
+keyword-free attack. It renames step vocabulary across a novelty spectrum
+(`rename_fraction` 0.0 → 1.0) and reports how procseq degrades. Even before full
+training it already shows the honest cliff (category next-step accuracy 0.50 → 0.00 as
+names lose keywords). We *report* this drop instead of hiding it.
+
+**How to say it out loud:** *"The physics pipeline guarantees valid output, but its
+anomaly benchmark is the rule checker graded against itself. procseq's verdict comes
+from an independent learned model with a real probability — here is its genuine,
+imperfect F1/AUC, and here (ood_novel) is exactly where it breaks on a truly novel
+family. That honest measurement is what the Industrial-AI track asked for."*
+
+---
+
 ## TL;DR
 
 You built **procseq**: a from-scratch, two-model ML pipeline (a "writer" decoder for

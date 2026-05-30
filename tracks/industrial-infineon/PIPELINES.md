@@ -124,3 +124,40 @@ tracks/industrial-infineon/
 ```
 A and B live in **disjoint directories**; the only shared code B touches is read-only
 (`data/`, `physics/ontology.py`). Nothing in A depends on B.
+
+---
+
+## 7. Combining the two: which of A's harnesses B should reuse
+
+A red-team audit (see `solution/WHAT_IS_PROCSEQ.md` §10) showed that **A's evaluation
+harnesses are circular** (the rule checker grades itself) — so we should NOT reuse A's
+*self-consistency* tests (`exhaustive_test`, `differential_fuzz`, `make_bad_testset`)
+as evidence of quality. But several of A's harnesses are genuinely useful to B:
+
+| A's harness | Reuse in B? | Why / how |
+|---|---|---|
+| **`pseudo_family.py`** (4th-family generator) | ✅ **done** | B's new `procseq/ood_novel.py` reuses `pseudo_sequence` + `inject_violation` for a *real* novel-vocabulary OOD test of the learned models (the auditor's keyword-free attack, owned). |
+| **`data/eval_metrics.py`** (official scorer) | ✅ **adopt as single source of truth** | Score *both* pipelines with this one file; keep `procseq/eval_metrics.py` only as a fast dev convenience. Kills the "duplicate scorers may diverge" risk. |
+| **`robustness_test.py`** (malformed-input fuzz) | ✅ adapt | Fire empty / over-length / unknown-family / novel-vocab inputs through B's `infer.py` and assert no crash + well-formed CSV. |
+| `physics/refinery.py` (beam + repair decode) | ⚠️ optional **hybrid** | Wrap B's decoder output with A's refinery so completions are *both* learned **and** guaranteed-valid (best of both for Task 2). |
+| `exhaustive_test` / `differential_fuzz` | ❌ skip | Circular — they prove a function equals itself, not skill. |
+
+### The "one pipeline" options (pick one)
+
+- **Option 1 — Two pipelines, one submission (recommended, low risk).** Keep A and B
+  separate; score both with the official `data/eval_metrics.py`; submit the
+  per-task winner (§4). B's role: the honest "did the model learn it + where it breaks"
+  evidence (`ood_novel`). *This is the fastest credible path.*
+- **Option 2 — Hybrid model (higher ceiling, more work).** Make B's learned decoder the
+  *generator* and feed its candidates into A's `refinery` beam/repair for Task 2, and
+  report B's encoder **and** A's rule engine for Task 3 side by side. One `inference`
+  entry point, two model backends. Do this only after Option 1 produces real numbers.
+- **Option 3 — Full merge into A.** Register B's decoder/encoder as backends inside
+  A's `inference.py`; delete B's duplicate tokenizer/metrics. Most work; only if there's
+  time after a correct submission exists.
+
+### Concrete next steps for convergence
+- [ ] Run **both** pipelines on Leonardo; score **both** with `data/eval_metrics.py`.
+- [ ] Run `procseq/ood_novel.py` on B's trained models → the honest OOD curve.
+- [ ] Decide Option 1 vs 2 based on the numbers (don't merge before measuring).
+- [ ] One results table + one `data/eval_metrics.py` for both → the submission story.
