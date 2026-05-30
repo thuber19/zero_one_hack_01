@@ -3,7 +3,6 @@
 #SBATCH --account=EUHPC_D30_031
 #SBATCH --partition=boost_usr_prod
 #SBATCH --reservation=strancc
-#SBATCH --qos=boost_usr_prod
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
