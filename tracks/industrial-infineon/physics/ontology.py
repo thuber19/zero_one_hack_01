@@ -355,6 +355,8 @@ _KEYWORD_FALLBACK: list[tuple[str, str]] = [
     ("DEPOSIT",          CAT_DEPOSIT),
     ("GROW",             CAT_DEPOSIT),
     ("NUCLEAT",          CAT_DEPOSIT),   # nucleation / seed-layer growth (ALD etc.)
+    ("ANODIZE",          CAT_DEPOSIT),   # anodic oxide growth (OOD-safe; distinctive)
+    ("ANODIS",           CAT_DEPOSIT),   # British spelling
     ("EPITAX",           CAT_DEPOSIT),
     ("OXIDAT",           CAT_DEPOSIT),
     ("OXIDIS",           CAT_DEPOSIT),   # British spelling

@@ -40,6 +40,13 @@ CASES = {
                                  "PLASMA ENHANCE EXOTIC FILM", "SHIP LOT"], "newfam"),
     "blank_and_ws_steps": (["RECEIVE WAFER LOT", "   ", "", "SHIP LOT"], "ic"),
     "pure_novel": (["FOO BAR", "BAZ QUX", "WIDGET FROB"], "mystery"),
+    # mixed vocab: a KNOWN in-vocab violation (deposit with no clean) plus ONE
+    # novel token — the engine is a per-step hybrid (known steps use the exact
+    # reference sets, novel steps use category), so the known violation must still
+    # be caught despite the novel token (audit: whole-sequence-routing residual).
+    "mixed_known_violation_plus_novel": (
+        ["RECEIVE WAFER LOT", "GLORP NOVEL STEP", "DEPOSIT POLYSILICON",
+         "WAFER SORT TEST", "SHIP LOT"], "mystery"),
 }
 
 

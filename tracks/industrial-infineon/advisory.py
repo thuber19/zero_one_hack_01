@@ -92,9 +92,9 @@ def advisory(steps: list[str], llm=None, include_llm: bool = False) -> dict:
         except Exception as e:
             suggestion = f"[LLM backend error: {e!r}]"
         report["experimental_llm"] = {
-            "banner": ("EXPERIMENTAL — this is a non-deterministic LLM SUGGESTION, "
-                       "NOT derived from the verified ruleset; it may be wrong and is "
-                       "NOT used for any scored decision. Trust the verified repair above."),
+            "banner": ("EXPERIMENTAL · UNVERIFIED · ADVISORY ONLY — non-deterministic "
+                       "LLM SUGGESTION, NOT derived from the verified ruleset; may be "
+                       "wrong; NOT used for any scored decision. Trust the verified repair above."),
             "prompt_sent": prompt,
             "suggestion": suggestion,
         }

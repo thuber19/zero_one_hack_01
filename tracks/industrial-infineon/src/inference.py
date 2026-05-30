@@ -87,6 +87,11 @@ class ProcessPredictor:
         rf_path = output_dir / "random_forest.pkl"
         if rf_path.exists():
             rf.load(rf_path, tokenizer)
+        else:
+            # LOUD: capability loss (no RF candidate mask) must not be silent.
+            print(f"[inference WARNING] no random_forest.pkl in {output_dir} — "
+                  "running on transformer + physics only (RF candidate mask disabled).",
+                  file=_sys.stderr)
         return cls(tokenizer, model, rf, device)
 
     def _encode_partial(self, steps: list[str], family: str) -> tuple[torch.Tensor, torch.Tensor]:

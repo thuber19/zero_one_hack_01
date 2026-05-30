@@ -59,7 +59,13 @@ try:
         ELECTRICAL_TEST_STEPS as _ETESTS,
     )
     HAVE_REFERENCE = True
-except Exception:  # pragma: no cover
+except Exception as _e:  # pragma: no cover
+    # LOUD: without the reference step sets, KNOWN steps fall back to category
+    # classification (a silent behavior change for in-vocab sequences). Warn.
+    import sys as _sys
+    print(f"[physics WARNING] reference step sets unavailable ({_e!r}); KNOWN-step "
+          "membership falls back to category classification — in-vocab behavior may "
+          "differ from the grader.", file=_sys.stderr)
     _DEP = _CLEAN = _ETCH = _IMPLANT = _IMPL_OPEN = frozenset()
     _CMP = _FILL = _PADS = _ETESTS = frozenset()
     HAVE_REFERENCE = False
@@ -378,6 +384,24 @@ LITHO_RULE = {
         "built by the previous level. Skipping a level means those structures "
         "and alignment marks were never created; decreasing a level would "
         "overwrite completed structures."),
+}
+
+# Honesty annotation (audit): a `physical_reason` string above describes WHY the
+# GRADER's rule exists, but not every rule is a universal physical law — some are
+# process CONVENTIONS or grader simplifications. Do NOT read this KB as a
+# semiconductor textbook. "law" = broadly true physics; "convention" = a
+# defensible process convention / grader simplification (real fabs have exceptions).
+RULE_UNIVERSALITY = {
+    "RULE_DEP_NO_CLEAN": "law (but enabler set folds anneal/CMP/oxidation into 'clean' — a grader simplification)",
+    "RULE_METAL_ETCH_NO_LITHO": "law",
+    "RULE_ETCH_NO_MASK": "law (blanket/spacer etches correctly excluded)",
+    "RULE_LITHO_LEVEL_SKIP": "law",
+    "RULE_IMPLANT_NO_MASK": "law (blanket implants exist but are out of the grader's trigger set)",
+    "RULE_CMP_NO_DEP": "law",
+    "RULE_PAD_OPEN_BEFORE_DEP": "law",
+    "RULE_TEST_BEFORE_PASSIVATION": "convention (real fabs run in-line parametric tests pre-passivation)",
+    "RULE_SHIP_BEFORE_TEST": "law",
+    "RULE_BACKSIDE_BEFORE_PASSIVATION": "convention (backside-metal timing varies by integration scheme)",
 }
 
 

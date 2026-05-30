@@ -97,6 +97,15 @@ def main():
     args = ap.parse_args()
 
     mdir = Path(args.model_dir)
+    # Reproducibility note: model dirs (outputs_M3/) are gitignored, so a clean
+    # checkout has no checkpoint. Fail with an actionable message rather than a
+    # bare FileNotFoundError.
+    if not (mdir / "best_transformer.pt").exists():
+        print(f"[category_eval] no checkpoint in {mdir}. Train first, e.g.:\n"
+              f"  python src/generate_integrated_data.py --extra-data 1000 --ood 600 --output-dir {mdir}\n"
+              f"  OUTPUT_DIR={mdir} python train_transformer_only.py --model-size tiny --epochs 12 --aux-category",
+              file=sys.stderr)
+        sys.exit(2)
     tokenizer = StepTokenizer.load(mdir / "tokenizer.txt")
     id2cat, ncat = build_id2cat(tokenizer)
     cat2idx = _cat_index_map(tokenizer)
