@@ -2,7 +2,6 @@
 #SBATCH --job-name=lstm_train
 #SBATCH --account=euhpc_d30_031
 #SBATCH --partition=boost_usr_prod
-#SBATCH --qos=boost_usr_prod
 #SBATCH --reservation=s_tra_ncc
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
