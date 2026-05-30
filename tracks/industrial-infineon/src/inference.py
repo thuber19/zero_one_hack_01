@@ -104,7 +104,11 @@ class ProcessPredictor:
         ckpt = output_dir / "best_model.pt"
         if not ckpt.exists():
             ckpt = output_dir / "best_transformer.pt"
-        model.load_state_dict(torch.load(ckpt, map_location=device, weights_only=True))
+        # strict=False: a model trained with --aux-category carries cat_head.*
+        # weights that inference doesn't need (it uses only the LM head). Dropping
+        # them is harmless; the LM weights load exactly.
+        model.load_state_dict(torch.load(ckpt, map_location=device, weights_only=True),
+                              strict=False)
         rf = StepCandidateForest()
         rf_path = output_dir / "random_forest.pkl"
         if rf_path.exists():
