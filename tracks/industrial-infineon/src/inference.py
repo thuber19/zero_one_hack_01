@@ -332,15 +332,33 @@ class ProcessPredictor:
 
 # ── Submission file generators ────────────────────────────────────────────
 
+def _read_eval(eval_csv: Path, required: list[str]) -> list[dict]:
+    """Read an eval CSV and FAIL LOUDLY if the schema doesn't match the spec —
+    never silently produce empty / zero-filled submissions on a column mismatch."""
+    if not Path(eval_csv).exists():
+        raise FileNotFoundError(f"eval file not found: {eval_csv}")
+    with open(eval_csv, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        cols = [c.strip() for c in (reader.fieldnames or [])]
+        missing = [c for c in required if c not in cols]
+        if missing:
+            raise ValueError(
+                f"{Path(eval_csv).name}: missing required column(s) {missing}. "
+                f"Found {cols}; spec requires {required}. Refusing to emit a "
+                f"submission from an unrecognised schema (see ASSUMPTIONS.md A1/A2).")
+        rows = list(reader)
+    if not rows:
+        raise ValueError(f"{Path(eval_csv).name}: 0 data rows — refusing to emit an empty submission.")
+    return rows
+
+
 def generate_task1_submission(
     predictor: ProcessPredictor,
     eval_csv: Path,
     output_csv: Path,
 ):
     """Generate Task 1 (next-step prediction) submission file."""
-    with open(eval_csv, newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
+    rows = _read_eval(eval_csv, ["EXAMPLE_ID", "FAMILY", "PARTIAL_SEQUENCE"])
 
     results = []
     for row in rows:
@@ -376,9 +394,7 @@ def generate_task2_submission(
     output_csv: Path,
 ):
     """Generate Task 2 (sequence completion) submission file."""
-    with open(eval_csv, newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
+    rows = _read_eval(eval_csv, ["EXAMPLE_ID", "FAMILY", "PARTIAL_SEQUENCE"])
 
     results = []
     for row in rows:
@@ -408,9 +424,7 @@ def generate_task3_submission(
     output_csv: Path,
 ):
     """Generate Task 3 (anomaly detection) submission file."""
-    with open(eval_csv, newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
+    rows = _read_eval(eval_csv, ["EXAMPLE_ID", "FAMILY", "SEQUENCE"])
 
     results = []
     for row in rows:

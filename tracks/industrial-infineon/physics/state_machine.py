@@ -41,6 +41,16 @@ from physics.process_knowledge import (
     step_in_event,
 )
 
+# Emit each distinct degradation warning ONCE (loudly, to stderr) instead of
+# silently swallowing it — no silent failures.
+_WARNED: set = set()
+
+
+def _warn_once(key: str, msg: str) -> None:
+    if key not in _WARNED:
+        _WARNED.add(key)
+        print(f"[physics WARNING] {msg}", file=sys.stderr)
+
 
 # ---------------------------------------------------------------------------
 # Wafer State — generic, driven by the KB
@@ -234,7 +244,13 @@ def validate_sequence_combined(steps: list[str]) -> list[PhysicsViolation]:
     """
     try:
         from physics.known_vocab import KNOWN_VOCAB
-    except Exception:
+    except Exception as e:
+        # LOUD: losing the vocab means we can never route to the exact grader,
+        # silently degrading every in-vocab sequence to the engine. Warn once.
+        _warn_once("known_vocab_missing",
+                   f"physics/known_vocab.py unavailable ({e!r}); in-vocab routing "
+                   "DISABLED — all sequences use the category engine (still correct "
+                   "by differential_fuzz, but the exact-grader path is lost).")
         KNOWN_VOCAB = frozenset()
 
     all_in_vocab = bool(KNOWN_VOCAB) and all(s in KNOWN_VOCAB for s in steps)
@@ -247,8 +263,11 @@ def validate_sequence_combined(steps: list[str]) -> list[PhysicsViolation]:
             return [PhysicsViolation(v.rule, v.step_index, v.step_name,
                                      v.description, "(deterministic rule check)")
                     for v in _det_validate(steps)]
-        except ImportError:
-            pass  # reference unavailable -> fall through to the engine
+        except ImportError as e:
+            _warn_once("reference_checker_missing",
+                       f"reference validate_sequence unavailable ({e!r}); using the "
+                       "category engine instead (engine==reference proven on in-vocab, "
+                       "so the verdict is unchanged — but the direct-grader call is lost).")
     return validate_by_state_machine(steps)
 
 
