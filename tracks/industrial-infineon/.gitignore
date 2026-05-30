@@ -3,3 +3,13 @@
 sample_eval/
 # machine-specific convenience runner
 run_m3.sh
+
+# secrets / local run artifacts (never commit)
+creds.txt
+*.pem
+*_ed25519*
+id_rsa*
+*.key
+outputs_bench/
+outputs_leonardo/
+run_*/
