@@ -13,3 +13,6 @@ id_rsa*
 outputs_bench/
 outputs_leonardo/
 run_*/
+
+# generated bad/test datasets (reproducible via make_bad_testset.py)
+bad_testset/
