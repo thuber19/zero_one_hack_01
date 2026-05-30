@@ -32,8 +32,11 @@ python -m procseq.build_data --n-per-family 5000 --seed 42
 
 srun accelerate launch --num_processes 1 -m procseq.train_decoder --config "$CONFIG"
 
-# Produce Task 1+2 submissions and self-score.
+# Self-score on our labelled mirrors (gives metrics.json).
 python -m procseq.infer --task 1 --config "$CONFIG"
 python -m procseq.infer --task 2 --config "$CONFIG"
 python -m procseq.run_eval --config "$CONFIG"
-echo "=== DONE $(date) — see artifacts/metrics.json + artifacts/submission_task{1,2}.csv ==="
+# Real submission from the organizers' data/eval_input_valid.csv (600 rows).
+python -m procseq.infer --task 1 --real --config "$CONFIG"
+python -m procseq.infer --task 2 --real --config "$CONFIG"
+echo "=== DONE $(date) — metrics.json + submission_task{1,2}_real.csv ==="

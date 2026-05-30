@@ -34,17 +34,23 @@ def _load_encoder(ckpt, tok):
             continue
     raise RuntimeError("encoder size mismatch")
 
-def run_anomaly(cfg):
+def run_anomaly(cfg, real=False):
     art = Path(cfg["artifacts"])
+    if real:
+        from procseq.grammar import TRAINING_DATA_DIR
+        src = Path(TRAINING_DATA_DIR) / "eval_input_anomaly.csv"
+        out = art / "submission_task3_real.csv"
+    else:
+        src = art / "eval_input_anomaly.csv"
+        out = art / "submission_task3.csv"
     tok = load_tokenizer(Path(cfg["encoder_ckpt"]))
     model = _load_encoder(cfg["encoder_ckpt"], tok)
     rows = []
-    with (art / "eval_input_anomaly.csv").open() as f:
+    with src.open() as f:
         for r in csv.DictReader(f):
             steps = r["SEQUENCE"].split("|")
             iv, sc, rule = classify_sequence(model, tok, steps, r["FAMILY"], RULE_IDS)
             rows.append([r["EXAMPLE_ID"], iv, f"{sc:.4f}", rule])
-    out = art / "submission_task3.csv"
     with out.open("w", newline="") as f:
         w = csv.writer(f); w.writerow(["EXAMPLE_ID","IS_VALID","SCORE","PREDICTED_RULE"])
         w.writerows(rows)

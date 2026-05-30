@@ -109,57 +109,69 @@ def _load_decoder(ckpt):
     from transformers import LlamaForCausalLM
     return LlamaForCausalLM.from_pretrained(ckpt)
 
-def run_task1(cfg):
+def _eval_input(cfg, name, real):
+    """Path to an eval-input file: the organizers' real one (data/) or our mirror."""
+    if real:
+        from procseq.grammar import TRAINING_DATA_DIR
+        return Path(TRAINING_DATA_DIR) / name
+    return Path(cfg["artifacts"]) / name
+
+def _sub_out(cfg, name, real):
+    suffix = "_real" if real else ""
+    stem, ext = name.rsplit(".", 1)
+    return Path(cfg["artifacts"]) / f"{stem}{suffix}.{ext}"
+
+def run_task1(cfg, real=False):
     tok = load_tokenizer(Path(cfg["decoder_ckpt"]))
     model = _load_decoder(cfg["decoder_ckpt"])
-    art = Path(cfg["artifacts"])
     constrain = bool(cfg.get("decoder", {}).get("constrained_decode", False))
     rows_out = []
-    with (art / "eval_input_valid.csv").open() as f:
+    with _eval_input(cfg, "eval_input_valid.csv", real).open() as f:
         for r in csv.DictReader(f):
             steps = r["PARTIAL_SEQUENCE"].split("|")
             ranked = predict_next_step(model, tok, steps, r["FAMILY"], k=5, constrain=constrain)
             ranked += [""] * (5 - len(ranked))
             rows_out.append([r["EXAMPLE_ID"], *ranked[:5]])
-    out = art / "submission_task1.csv"
+    out = _sub_out(cfg, "submission_task1.csv", real)
     with out.open("w", newline="") as f:
         w = csv.writer(f); w.writerow(["EXAMPLE_ID","RANK_1","RANK_2","RANK_3","RANK_4","RANK_5"])
         w.writerows(rows_out)
     print(f"Task1 -> {out} ({len(rows_out)} rows)")
 
-def run_task2(cfg):
+def run_task2(cfg, real=False):
     tok = load_tokenizer(Path(cfg["decoder_ckpt"]))
     model = _load_decoder(cfg["decoder_ckpt"])
-    art = Path(cfg["artifacts"])
     constrain = bool(cfg.get("decoder", {}).get("constrained_decode", False))
     rows_out = []
-    with (art / "eval_input_valid.csv").open() as f:
+    with _eval_input(cfg, "eval_input_valid.csv", real).open() as f:
         for r in csv.DictReader(f):
             steps = r["PARTIAL_SEQUENCE"].split("|")
             suffix = complete_sequence(model, tok, steps, r["FAMILY"],
                                        max_new=cfg["decoder"].get("max_len", 256),
                                        constrain=constrain)
             rows_out.append([r["EXAMPLE_ID"], "|".join(suffix)])
-    out = art / "submission_task2.csv"
+    out = _sub_out(cfg, "submission_task2.csv", real)
     with out.open("w", newline="") as f:
         w = csv.writer(f); w.writerow(["EXAMPLE_ID","PREDICTED_SEQUENCE"])
         w.writerows(rows_out)
     print(f"Task2 -> {out} ({len(rows_out)} rows)")
 
-def run_task3(cfg):
+def run_task3(cfg, real=False):
     from procseq.infer_anomaly import run_anomaly
-    run_anomaly(cfg)
+    run_anomaly(cfg, real=real)
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", required=True)
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--task", choices=["1","2","3"])
+    ap.add_argument("--real", action="store_true",
+                    help="read the organizers' data/eval_input_*.csv and write *_real.csv")
     a = ap.parse_args(argv)
     cfg = load_config(a.config)
-    if a.all or a.task == "1": run_task1(cfg)
-    if a.all or a.task == "2": run_task2(cfg)
-    if a.all or a.task == "3": run_task3(cfg)
+    if a.all or a.task == "1": run_task1(cfg, real=a.real)
+    if a.all or a.task == "2": run_task2(cfg, real=a.real)
+    if a.all or a.task == "3": run_task3(cfg, real=a.real)
 
 if __name__ == "__main__":
     main()

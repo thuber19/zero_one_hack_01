@@ -29,4 +29,6 @@ python -m procseq.build_data --n-per-family 5000 --seed 42
 srun accelerate launch --num_processes 1 -m procseq.train_encoder --config "$CONFIG"
 python -m procseq.infer --task 3 --config "$CONFIG"
 python -m procseq.run_eval --config "$CONFIG"
-echo "=== DONE $(date) — see artifacts/metrics.json + artifacts/submission_task3.csv ==="
+# Real submission from the organizers' data/eval_input_anomaly.csv (987 rows).
+python -m procseq.infer --task 3 --real --config "$CONFIG"
+echo "=== DONE $(date) — metrics.json + submission_task3_real.csv ==="

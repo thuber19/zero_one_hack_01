@@ -6,7 +6,13 @@ so we add it to sys.path once, here, and re-export the symbols we use.
 import sys
 from pathlib import Path
 
-_TRAINING_DATA = (Path(__file__).resolve().parents[2] / "training_data")
+_TRACK = Path(__file__).resolve().parents[2]
+# The track data dir was renamed training_data/ -> data/ on main; support both.
+_TRAINING_DATA = next(
+    (_TRACK / d for d in ("data", "training_data")
+     if (_TRACK / d / "generate_sequences.py").exists()),
+    _TRACK / "data",
+)
 if str(_TRAINING_DATA) not in sys.path:
     sys.path.insert(0, str(_TRAINING_DATA))
 
