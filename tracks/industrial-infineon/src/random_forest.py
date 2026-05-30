@@ -112,11 +112,17 @@ class StepCandidateForest:
         block_id = classify_step_block_id(current_step)
 
         features = np.array([[fam_id, curr_id, prev1, prev2, prev3, litho_level, position_frac, block_id]])
-        proba = self.clf.predict_proba(features)[0]
-
-        # Get top-K
-        top_indices = np.argsort(proba)[-self.top_k:][::-1]
-        candidates = self.classes_[top_indices].tolist()
+        # Guard against a stale/incompatible RF artifact (feature-schema drift):
+        # if the pickled forest expects a different feature count than we build,
+        # degrade gracefully to the transition-map fallback instead of crashing.
+        expected = getattr(self.clf, "n_features_in_", features.shape[1])
+        if expected != features.shape[1]:
+            candidates = []
+        else:
+            proba = self.clf.predict_proba(features)[0]
+            # Get top-K
+            top_indices = np.argsort(proba)[-self.top_k:][::-1]
+            candidates = self.classes_[top_indices].tolist()
 
         # Also add transition-map fallback candidates
         key = f"{family.lower()}|{current_step}"
