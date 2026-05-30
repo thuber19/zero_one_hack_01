@@ -1,0 +1,1228 @@
+{
+  "batch_id": "batch_bad_001",
+  "predicted_yield": 0.614,
+  "confidence": 0.73,
+  "risk_steps_detected": 17,
+  "anomalous_batches": 3,
+  "per_step": [
+    {
+      "step_id": "s001",
+      "step_name": "WAFER_CLEAN_INITIAL",
+      "category": "cleaning",
+      "risk_score": 0.12,
+      "confidence_lo": 0.04,
+      "confidence_hi": 0.20,
+      "duration_min": 25,
+      "sensors": { "temperature_c": 80, "flow_slm": 1.2 },
+      "shap": []
+    },
+    {
+      "step_id": "s002",
+      "step_name": "FIELD_OXIDE_GROWTH",
+      "category": "deposition",
+      "risk_score": 0.18,
+      "confidence_lo": 0.10,
+      "confidence_hi": 0.26,
+      "duration_min": 120,
+      "sensors": { "temperature_c": 950, "pressure_mbar": 760 },
+      "shap": []
+    },
+    {
+      "step_id": "s003",
+      "step_name": "NITRIDE_DEP",
+      "category": "deposition",
+      "risk_score": 0.09,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.17,
+      "duration_min": 45,
+      "sensors": { "temperature_c": 750, "pressure_mbar": 0.5, "flow_slm": 2.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s004",
+      "step_name": "LITHO_STI",
+      "category": "lithography",
+      "risk_score": 0.22,
+      "confidence_lo": 0.14,
+      "confidence_hi": 0.30,
+      "duration_min": 60,
+      "sensors": { "focus_offset_nm": 5, "reflectivity_pct": 98.2 },
+      "shap": []
+    },
+    {
+      "step_id": "s005",
+      "step_name": "ETCH_STI",
+      "category": "etch",
+      "risk_score": 0.15,
+      "confidence_lo": 0.07,
+      "confidence_hi": 0.23,
+      "duration_min": 30,
+      "sensors": { "etch_rate_mean": 45.2, "pressure_mbar": 5.0, "rf_power_w": 400 },
+      "shap": []
+    },
+    {
+      "step_id": "s006",
+      "step_name": "STI_FILL_OXIDE",
+      "category": "deposition",
+      "risk_score": 0.28,
+      "confidence_lo": 0.20,
+      "confidence_hi": 0.36,
+      "duration_min": 90,
+      "sensors": { "temperature_c": 400, "pressure_mbar": 2.5, "deposition_rate": 12.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s007",
+      "step_name": "CMP_STI",
+      "category": "cmp",
+      "risk_score": 0.31,
+      "confidence_lo": 0.23,
+      "confidence_hi": 0.39,
+      "duration_min": 40,
+      "sensors": { "removal_rate_nm_min": 150, "planarity_nm": 8.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s008",
+      "step_name": "GATE_OXIDE_GROWTH",
+      "category": "deposition",
+      "risk_score": 0.76,
+      "confidence_lo": 0.68,
+      "confidence_hi": 0.84,
+      "duration_min": 30,
+      "sensors": { "temperature_c": 850, "pressure_mbar": 760, "uniformity_pct": 91.2 },
+      "shap": [
+        { "feature": "temperature_c", "value": 852.3, "contribution": 0.14 },
+        { "feature": "uniformity_pct", "value": 91.2, "contribution": 0.12 },
+        { "feature": "pressure_mbar", "value": 763.1, "contribution": 0.09 },
+        { "feature": "thickness_nm", "value": 2.8, "contribution": 0.07 },
+        { "feature": "etch_rate_std", "value": 1.45, "contribution": 0.06 }
+      ]
+    },
+    {
+      "step_id": "s009",
+      "step_name": "POLY_DEPOSITION",
+      "category": "deposition",
+      "risk_score": 0.19,
+      "confidence_lo": 0.11,
+      "confidence_hi": 0.27,
+      "duration_min": 50,
+      "sensors": { "temperature_c": 620, "pressure_mbar": 0.3, "deposition_rate": 8.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s010",
+      "step_name": "LITHO_GATE",
+      "category": "lithography",
+      "risk_score": 0.25,
+      "confidence_lo": 0.17,
+      "confidence_hi": 0.33,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 3, "cd_nm": 28.5, "overlay_nm": 1.8 },
+      "shap": []
+    },
+    {
+      "step_id": "s011",
+      "step_name": "ETCH_POLY",
+      "category": "etch",
+      "risk_score": 0.33,
+      "confidence_lo": 0.25,
+      "confidence_hi": 0.41,
+      "duration_min": 35,
+      "sensors": { "etch_rate_mean": 38.0, "etch_rate_std": 1.1, "rf_power_w": 350 },
+      "shap": []
+    },
+    {
+      "step_id": "s012",
+      "step_name": "SIDEWALL_OXIDE",
+      "category": "deposition",
+      "risk_score": 0.17,
+      "confidence_lo": 0.09,
+      "confidence_hi": 0.25,
+      "duration_min": 20,
+      "sensors": { "temperature_c": 800, "pressure_mbar": 1.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s013",
+      "step_name": "LDD_IMPLANT_N",
+      "category": "implant",
+      "risk_score": 0.21,
+      "confidence_lo": 0.13,
+      "confidence_hi": 0.29,
+      "duration_min": 15,
+      "sensors": { "dose_cm2": 1.2e13, "energy_kev": 30 },
+      "shap": []
+    },
+    {
+      "step_id": "s014",
+      "step_name": "SPACER_DEP",
+      "category": "deposition",
+      "risk_score": 0.14,
+      "confidence_lo": 0.06,
+      "confidence_hi": 0.22,
+      "duration_min": 40,
+      "sensors": { "temperature_c": 680, "pressure_mbar": 0.4, "deposition_rate": 6.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s015",
+      "step_name": "SOURCE_DRAIN_IMPLANT",
+      "category": "implant",
+      "risk_score": 0.89,
+      "confidence_lo": 0.81,
+      "confidence_hi": 0.97,
+      "duration_min": 20,
+      "sensors": { "dose_cm2": 5.0e15, "energy_kev": 80, "contact_angle_deg": 12 },
+      "shap": [
+        { "feature": "dose_cm2", "value": 5.12e15, "contribution": 0.22 },
+        { "feature": "energy_kev", "value": 82.5, "contribution": 0.18 },
+        { "feature": "contact_angle_deg", "value": 12.3, "contribution": 0.11 },
+        { "feature": "particle_count", "value": 85, "contribution": 0.09 },
+        { "feature": "sheet_res_ohm_sq", "value": 48.2, "contribution": 0.07 }
+      ]
+    },
+    {
+      "step_id": "s016",
+      "step_name": "ANNEAL_RTA",
+      "category": "anneal",
+      "risk_score": 0.27,
+      "confidence_lo": 0.19,
+      "confidence_hi": 0.35,
+      "duration_min": 10,
+      "sensors": { "temperature_c": 1050, "pressure_mbar": 760 },
+      "shap": []
+    },
+    {
+      "step_id": "s017",
+      "step_name": "METROLOGY_CD",
+      "category": "metrology",
+      "risk_score": 0.08,
+      "confidence_lo": 0.02,
+      "confidence_hi": 0.16,
+      "duration_min": 30,
+      "sensors": { "cd_nm": 27.8, "overlay_nm": 2.1 },
+      "shap": []
+    },
+    {
+      "step_id": "s018",
+      "step_name": "SILICIDE_CLEAN",
+      "category": "cleaning",
+      "risk_score": 0.11,
+      "confidence_lo": 0.03,
+      "confidence_hi": 0.19,
+      "duration_min": 20,
+      "sensors": { "temperature_c": 50, "flow_slm": 3.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s019",
+      "step_name": "COBALT_SILICIDE_DEP",
+      "category": "deposition",
+      "risk_score": 0.29,
+      "confidence_lo": 0.21,
+      "confidence_hi": 0.37,
+      "duration_min": 35,
+      "sensors": { "temperature_c": 500, "pressure_mbar": 0.8, "deposition_rate": 4.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s020",
+      "step_name": "SILICIDE_ANNEAL",
+      "category": "anneal",
+      "risk_score": 0.16,
+      "confidence_lo": 0.08,
+      "confidence_hi": 0.24,
+      "duration_min": 15,
+      "sensors": { "temperature_c": 750, "pressure_mbar": 760 },
+      "shap": []
+    },
+    {
+      "step_id": "s021",
+      "step_name": "PRE_ILD_CLEAN",
+      "category": "cleaning",
+      "risk_score": 0.07,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.15,
+      "duration_min": 20,
+      "sensors": { "flow_slm": 2.5, "contact_angle_deg": 30 },
+      "shap": []
+    },
+    {
+      "step_id": "s022",
+      "step_name": "ILD_OXIDE_DEP",
+      "category": "deposition",
+      "risk_score": 0.24,
+      "confidence_lo": 0.16,
+      "confidence_hi": 0.32,
+      "duration_min": 60,
+      "sensors": { "temperature_c": 400, "pressure_mbar": 2.0, "deposition_rate": 15.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s023",
+      "step_name": "CMP_ILD",
+      "category": "cmp",
+      "risk_score": 0.78,
+      "confidence_lo": 0.70,
+      "confidence_hi": 0.86,
+      "duration_min": 50,
+      "sensors": { "removal_rate_nm_min": 165, "planarity_nm": 14.2, "pressure_mbar": 3.5 },
+      "shap": [
+        { "feature": "removal_rate_nm_min", "value": 168.2, "contribution": 0.17 },
+        { "feature": "planarity_nm", "value": 14.2, "contribution": 0.15 },
+        { "feature": "etch_rate_std", "value": 1.9, "contribution": 0.11 },
+        { "feature": "pressure_mbar", "value": 3.6, "contribution": 0.08 },
+        { "feature": "uniformity_pct", "value": 89.5, "contribution": 0.07 }
+      ]
+    },
+    {
+      "step_id": "s024",
+      "step_name": "LITHO_CONTACT",
+      "category": "lithography",
+      "risk_score": 0.20,
+      "confidence_lo": 0.12,
+      "confidence_hi": 0.28,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 4, "cd_nm": 90.0, "overlay_nm": 3.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s025",
+      "step_name": "ETCH_CONTACT",
+      "category": "etch",
+      "risk_score": 0.30,
+      "confidence_lo": 0.22,
+      "confidence_hi": 0.38,
+      "duration_min": 40,
+      "sensors": { "etch_rate_mean": 55.0, "etch_rate_std": 1.3, "rf_power_w": 450 },
+      "shap": []
+    },
+    {
+      "step_id": "s026",
+      "step_name": "BARRIER_DEP_TiN",
+      "category": "deposition",
+      "risk_score": 0.22,
+      "confidence_lo": 0.14,
+      "confidence_hi": 0.30,
+      "duration_min": 25,
+      "sensors": { "temperature_c": 350, "pressure_mbar": 1.5, "deposition_rate": 3.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s027",
+      "step_name": "TUNGSTEN_FILL",
+      "category": "deposition",
+      "risk_score": 0.19,
+      "confidence_lo": 0.11,
+      "confidence_hi": 0.27,
+      "duration_min": 45,
+      "sensors": { "temperature_c": 425, "pressure_mbar": 80, "deposition_rate": 50.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s028",
+      "step_name": "CMP_W_PLUG",
+      "category": "cmp",
+      "risk_score": 0.26,
+      "confidence_lo": 0.18,
+      "confidence_hi": 0.34,
+      "duration_min": 35,
+      "sensors": { "removal_rate_nm_min": 180, "planarity_nm": 6.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s029",
+      "step_name": "METROLOGY_CONTACT",
+      "category": "metrology",
+      "risk_score": 0.10,
+      "confidence_lo": 0.02,
+      "confidence_hi": 0.18,
+      "duration_min": 30,
+      "sensors": { "sheet_res_ohm_sq": 12.5, "cd_nm": 91.2 },
+      "shap": []
+    },
+    {
+      "step_id": "s030",
+      "step_name": "PRE_M1_CLEAN",
+      "category": "cleaning",
+      "risk_score": 0.13,
+      "confidence_lo": 0.05,
+      "confidence_hi": 0.21,
+      "duration_min": 20,
+      "sensors": { "flow_slm": 2.0, "contact_angle_deg": 28 },
+      "shap": []
+    },
+    {
+      "step_id": "s031",
+      "step_name": "METAL_1_DEP",
+      "category": "deposition",
+      "risk_score": 0.74,
+      "confidence_lo": 0.66,
+      "confidence_hi": 0.82,
+      "duration_min": 60,
+      "sensors": { "temperature_c": 250, "pressure_mbar": 1.0, "deposition_rate": 20.0 },
+      "shap": [
+        { "feature": "deposition_rate", "value": 21.5, "contribution": 0.16 },
+        { "feature": "temperature_c", "value": 253.4, "contribution": 0.13 },
+        { "feature": "thickness_nm", "value": 302.8, "contribution": 0.10 },
+        { "feature": "uniformity_pct", "value": 90.1, "contribution": 0.08 },
+        { "feature": "etch_rate_std", "value": 1.7, "contribution": 0.06 }
+      ]
+    },
+    {
+      "step_id": "s032",
+      "step_name": "LITHO_M1",
+      "category": "lithography",
+      "risk_score": 0.28,
+      "confidence_lo": 0.20,
+      "confidence_hi": 0.36,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 6, "cd_nm": 100.0, "overlay_nm": 2.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s033",
+      "step_name": "ETCH_M1",
+      "category": "etch",
+      "risk_score": 0.35,
+      "confidence_lo": 0.27,
+      "confidence_hi": 0.43,
+      "duration_min": 40,
+      "sensors": { "etch_rate_mean": 42.0, "etch_rate_std": 1.4, "rf_power_w": 380 },
+      "shap": []
+    },
+    {
+      "step_id": "s034",
+      "step_name": "POST_M1_CLEAN",
+      "category": "cleaning",
+      "risk_score": 0.09,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.17,
+      "duration_min": 20,
+      "sensors": { "flow_slm": 1.8, "contact_angle_deg": 25 },
+      "shap": []
+    },
+    {
+      "step_id": "s035",
+      "step_name": "IMD1_DEP",
+      "category": "deposition",
+      "risk_score": 0.23,
+      "confidence_lo": 0.15,
+      "confidence_hi": 0.31,
+      "duration_min": 55,
+      "sensors": { "temperature_c": 380, "pressure_mbar": 2.2, "deposition_rate": 14.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s036",
+      "step_name": "CMP_IMD1",
+      "category": "cmp",
+      "risk_score": 0.32,
+      "confidence_lo": 0.24,
+      "confidence_hi": 0.40,
+      "duration_min": 45,
+      "sensors": { "removal_rate_nm_min": 155, "planarity_nm": 9.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s037",
+      "step_name": "LITHO_VIA1",
+      "category": "lithography",
+      "risk_score": 0.18,
+      "confidence_lo": 0.10,
+      "confidence_hi": 0.26,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 5, "cd_nm": 80.0, "overlay_nm": 2.2 },
+      "shap": []
+    },
+    {
+      "step_id": "s038",
+      "step_name": "ETCH_VIA1",
+      "category": "etch",
+      "risk_score": 0.87,
+      "confidence_lo": 0.79,
+      "confidence_hi": 0.95,
+      "duration_min": 45,
+      "sensors": { "etch_rate_mean": 60.0, "etch_rate_std": 2.8, "rf_power_w": 500, "pressure_mbar": 4.5 },
+      "shap": [
+        { "feature": "etch_rate_std", "value": 2.8, "contribution": 0.23 },
+        { "feature": "rf_power_w", "value": 502.0, "contribution": 0.19 },
+        { "feature": "etch_rate_mean", "value": 62.1, "contribution": 0.14 },
+        { "feature": "pressure_mbar", "value": 4.6, "contribution": 0.10 },
+        { "feature": "cd_nm", "value": 78.5, "contribution": 0.07 }
+      ]
+    },
+    {
+      "step_id": "s039",
+      "step_name": "BARRIER_DEP_TaN",
+      "category": "deposition",
+      "risk_score": 0.21,
+      "confidence_lo": 0.13,
+      "confidence_hi": 0.29,
+      "duration_min": 25,
+      "sensors": { "temperature_c": 300, "pressure_mbar": 1.2, "deposition_rate": 2.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s040",
+      "step_name": "COPPER_SEED_DEP",
+      "category": "deposition",
+      "risk_score": 0.17,
+      "confidence_lo": 0.09,
+      "confidence_hi": 0.25,
+      "duration_min": 20,
+      "sensors": { "temperature_c": 200, "pressure_mbar": 0.5, "deposition_rate": 5.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s041",
+      "step_name": "COPPER_PLATING",
+      "category": "deposition",
+      "risk_score": 0.29,
+      "confidence_lo": 0.21,
+      "confidence_hi": 0.37,
+      "duration_min": 30,
+      "sensors": { "temperature_c": 25, "flow_slm": 0.8, "deposition_rate": 80.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s042",
+      "step_name": "ANNEAL_CU",
+      "category": "anneal",
+      "risk_score": 0.15,
+      "confidence_lo": 0.07,
+      "confidence_hi": 0.23,
+      "duration_min": 30,
+      "sensors": { "temperature_c": 350, "pressure_mbar": 760 },
+      "shap": []
+    },
+    {
+      "step_id": "s043",
+      "step_name": "CMP_CU_M1",
+      "category": "cmp",
+      "risk_score": 0.26,
+      "confidence_lo": 0.18,
+      "confidence_hi": 0.34,
+      "duration_min": 50,
+      "sensors": { "removal_rate_nm_min": 200, "planarity_nm": 7.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s044",
+      "step_name": "DIFFUSION_BARRIER_CAP",
+      "category": "deposition",
+      "risk_score": 0.72,
+      "confidence_lo": 0.64,
+      "confidence_hi": 0.80,
+      "duration_min": 15,
+      "sensors": { "temperature_c": 280, "pressure_mbar": 0.8, "deposition_rate": 1.5 },
+      "shap": [
+        { "feature": "deposition_rate", "value": 1.2, "contribution": 0.15 },
+        { "feature": "temperature_c", "value": 281.0, "contribution": 0.12 },
+        { "feature": "pressure_mbar", "value": 0.75, "contribution": 0.09 },
+        { "feature": "thickness_nm", "value": 18.5, "contribution": 0.07 },
+        { "feature": "uniformity_pct", "value": 88.0, "contribution": 0.06 }
+      ]
+    },
+    {
+      "step_id": "s045",
+      "step_name": "IMD2_DEP",
+      "category": "deposition",
+      "risk_score": 0.20,
+      "confidence_lo": 0.12,
+      "confidence_hi": 0.28,
+      "duration_min": 55,
+      "sensors": { "temperature_c": 380, "pressure_mbar": 2.0, "deposition_rate": 14.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s046",
+      "step_name": "CMP_IMD2",
+      "category": "cmp",
+      "risk_score": 0.25,
+      "confidence_lo": 0.17,
+      "confidence_hi": 0.33,
+      "duration_min": 45,
+      "sensors": { "removal_rate_nm_min": 152, "planarity_nm": 8.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s047",
+      "step_name": "LITHO_VIA2",
+      "category": "lithography",
+      "risk_score": 0.16,
+      "confidence_lo": 0.08,
+      "confidence_hi": 0.24,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 4, "cd_nm": 82.0, "overlay_nm": 2.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s048",
+      "step_name": "ETCH_VIA2",
+      "category": "etch",
+      "risk_score": 0.30,
+      "confidence_lo": 0.22,
+      "confidence_hi": 0.38,
+      "duration_min": 45,
+      "sensors": { "etch_rate_mean": 58.0, "etch_rate_std": 1.2, "rf_power_w": 480 },
+      "shap": []
+    },
+    {
+      "step_id": "s049",
+      "step_name": "COPPER_SEED_M2",
+      "category": "deposition",
+      "risk_score": 0.14,
+      "confidence_lo": 0.06,
+      "confidence_hi": 0.22,
+      "duration_min": 20,
+      "sensors": { "temperature_c": 200, "pressure_mbar": 0.5, "deposition_rate": 5.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s050",
+      "step_name": "COPPER_PLATING_M2",
+      "category": "deposition",
+      "risk_score": 0.23,
+      "confidence_lo": 0.15,
+      "confidence_hi": 0.31,
+      "duration_min": 30,
+      "sensors": { "temperature_c": 25, "flow_slm": 0.8, "deposition_rate": 80.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s051",
+      "step_name": "CMP_CU_M2",
+      "category": "cmp",
+      "risk_score": 0.71,
+      "confidence_lo": 0.63,
+      "confidence_hi": 0.79,
+      "duration_min": 50,
+      "sensors": { "removal_rate_nm_min": 210, "planarity_nm": 12.0, "pressure_mbar": 4.0 },
+      "shap": [
+        { "feature": "planarity_nm", "value": 12.5, "contribution": 0.14 },
+        { "feature": "removal_rate_nm_min", "value": 212.0, "contribution": 0.12 },
+        { "feature": "pressure_mbar", "value": 4.1, "contribution": 0.09 },
+        { "feature": "uniformity_pct", "value": 87.3, "contribution": 0.07 },
+        { "feature": "etch_rate_std", "value": 1.6, "contribution": 0.05 }
+      ]
+    },
+    {
+      "step_id": "s052",
+      "step_name": "DIFFUSION_BARRIER_M2",
+      "category": "deposition",
+      "risk_score": 0.19,
+      "confidence_lo": 0.11,
+      "confidence_hi": 0.27,
+      "duration_min": 15,
+      "sensors": { "temperature_c": 280, "pressure_mbar": 0.8, "deposition_rate": 1.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s053",
+      "step_name": "IMD3_DEP",
+      "category": "deposition",
+      "risk_score": 0.22,
+      "confidence_lo": 0.14,
+      "confidence_hi": 0.30,
+      "duration_min": 55,
+      "sensors": { "temperature_c": 380, "pressure_mbar": 2.0, "deposition_rate": 14.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s054",
+      "step_name": "CMP_IMD3",
+      "category": "cmp",
+      "risk_score": 0.28,
+      "confidence_lo": 0.20,
+      "confidence_hi": 0.36,
+      "duration_min": 45,
+      "sensors": { "removal_rate_nm_min": 148, "planarity_nm": 9.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s055",
+      "step_name": "LITHO_VIA3",
+      "category": "lithography",
+      "risk_score": 0.15,
+      "confidence_lo": 0.07,
+      "confidence_hi": 0.23,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 5, "cd_nm": 85.0, "overlay_nm": 2.4 },
+      "shap": []
+    },
+    {
+      "step_id": "s056",
+      "step_name": "ETCH_VIA3",
+      "category": "etch",
+      "risk_score": 0.29,
+      "confidence_lo": 0.21,
+      "confidence_hi": 0.37,
+      "duration_min": 45,
+      "sensors": { "etch_rate_mean": 57.0, "etch_rate_std": 1.1, "rf_power_w": 470 },
+      "shap": []
+    },
+    {
+      "step_id": "s057",
+      "step_name": "METAL_3_DEP",
+      "category": "deposition",
+      "risk_score": 0.91,
+      "confidence_lo": 0.83,
+      "confidence_hi": 0.99,
+      "duration_min": 60,
+      "sensors": { "temperature_c": 255, "pressure_mbar": 1.1, "deposition_rate": 19.5 },
+      "shap": [
+        { "feature": "deposition_rate", "value": 17.2, "contribution": 0.24 },
+        { "feature": "temperature_c", "value": 258.6, "contribution": 0.20 },
+        { "feature": "thickness_nm", "value": 315.0, "contribution": 0.15 },
+        { "feature": "uniformity_pct", "value": 85.2, "contribution": 0.12 },
+        { "feature": "etch_rate_std", "value": 2.1, "contribution": 0.08 }
+      ]
+    },
+    {
+      "step_id": "s058",
+      "step_name": "LITHO_M3",
+      "category": "lithography",
+      "risk_score": 0.24,
+      "confidence_lo": 0.16,
+      "confidence_hi": 0.32,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 5, "cd_nm": 100.0, "overlay_nm": 2.6 },
+      "shap": []
+    },
+    {
+      "step_id": "s059",
+      "step_name": "ETCH_M3",
+      "category": "etch",
+      "risk_score": 0.34,
+      "confidence_lo": 0.26,
+      "confidence_hi": 0.42,
+      "duration_min": 40,
+      "sensors": { "etch_rate_mean": 41.0, "etch_rate_std": 1.3, "rf_power_w": 375 },
+      "shap": []
+    },
+    {
+      "step_id": "s060",
+      "step_name": "POST_M3_CLEAN",
+      "category": "cleaning",
+      "risk_score": 0.08,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.16,
+      "duration_min": 20,
+      "sensors": { "flow_slm": 1.8, "contact_angle_deg": 27 },
+      "shap": []
+    },
+    {
+      "step_id": "s061",
+      "step_name": "IMD4_DEP",
+      "category": "deposition",
+      "risk_score": 0.21,
+      "confidence_lo": 0.13,
+      "confidence_hi": 0.29,
+      "duration_min": 55,
+      "sensors": { "temperature_c": 380, "pressure_mbar": 2.0, "deposition_rate": 14.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s062",
+      "step_name": "CMP_IMD4",
+      "category": "cmp",
+      "risk_score": 0.27,
+      "confidence_lo": 0.19,
+      "confidence_hi": 0.35,
+      "duration_min": 45,
+      "sensors": { "removal_rate_nm_min": 150, "planarity_nm": 9.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s063",
+      "step_name": "LITHO_VIA4",
+      "category": "lithography",
+      "risk_score": 0.73,
+      "confidence_lo": 0.65,
+      "confidence_hi": 0.81,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 9.5, "cd_nm": 77.2, "overlay_nm": 5.8 },
+      "shap": [
+        { "feature": "overlay_nm", "value": 5.8, "contribution": 0.18 },
+        { "feature": "focus_offset_nm", "value": 9.5, "contribution": 0.15 },
+        { "feature": "cd_nm", "value": 77.2, "contribution": 0.12 },
+        { "feature": "reflectivity_pct", "value": 94.5, "contribution": 0.08 },
+        { "feature": "etch_rate_std", "value": 1.5, "contribution": 0.06 }
+      ]
+    },
+    {
+      "step_id": "s064",
+      "step_name": "ETCH_VIA4",
+      "category": "etch",
+      "risk_score": 0.31,
+      "confidence_lo": 0.23,
+      "confidence_hi": 0.39,
+      "duration_min": 45,
+      "sensors": { "etch_rate_mean": 56.0, "etch_rate_std": 1.2, "rf_power_w": 460 },
+      "shap": []
+    },
+    {
+      "step_id": "s065",
+      "step_name": "COPPER_SEED_M4",
+      "category": "deposition",
+      "risk_score": 0.13,
+      "confidence_lo": 0.05,
+      "confidence_hi": 0.21,
+      "duration_min": 20,
+      "sensors": { "temperature_c": 200, "pressure_mbar": 0.5, "deposition_rate": 5.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s066",
+      "step_name": "COPPER_PLATING_M4",
+      "category": "deposition",
+      "risk_score": 0.22,
+      "confidence_lo": 0.14,
+      "confidence_hi": 0.30,
+      "duration_min": 30,
+      "sensors": { "temperature_c": 25, "flow_slm": 0.8, "deposition_rate": 80.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s067",
+      "step_name": "ANNEAL_CU_M4",
+      "category": "anneal",
+      "risk_score": 0.16,
+      "confidence_lo": 0.08,
+      "confidence_hi": 0.24,
+      "duration_min": 30,
+      "sensors": { "temperature_c": 350, "pressure_mbar": 760 },
+      "shap": []
+    },
+    {
+      "step_id": "s068",
+      "step_name": "CMP_CU_M4",
+      "category": "cmp",
+      "risk_score": 0.75,
+      "confidence_lo": 0.67,
+      "confidence_hi": 0.83,
+      "duration_min": 50,
+      "sensors": { "removal_rate_nm_min": 208, "planarity_nm": 13.5, "pressure_mbar": 4.2 },
+      "shap": [
+        { "feature": "planarity_nm", "value": 13.5, "contribution": 0.15 },
+        { "feature": "removal_rate_nm_min", "value": 210.0, "contribution": 0.13 },
+        { "feature": "pressure_mbar", "value": 4.3, "contribution": 0.10 },
+        { "feature": "uniformity_pct", "value": 86.9, "contribution": 0.08 },
+        { "feature": "particle_count", "value": 62, "contribution": 0.06 }
+      ]
+    },
+    {
+      "step_id": "s069",
+      "step_name": "DIFFUSION_BARRIER_M4",
+      "category": "deposition",
+      "risk_score": 0.18,
+      "confidence_lo": 0.10,
+      "confidence_hi": 0.26,
+      "duration_min": 15,
+      "sensors": { "temperature_c": 280, "pressure_mbar": 0.8, "deposition_rate": 1.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s070",
+      "step_name": "IMD5_DEP",
+      "category": "deposition",
+      "risk_score": 0.20,
+      "confidence_lo": 0.12,
+      "confidence_hi": 0.28,
+      "duration_min": 55,
+      "sensors": { "temperature_c": 378, "pressure_mbar": 2.1, "deposition_rate": 13.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s071",
+      "step_name": "CMP_IMD5",
+      "category": "cmp",
+      "risk_score": 0.25,
+      "confidence_lo": 0.17,
+      "confidence_hi": 0.33,
+      "duration_min": 45,
+      "sensors": { "removal_rate_nm_min": 145, "planarity_nm": 8.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s072",
+      "step_name": "LITHO_VIA5",
+      "category": "lithography",
+      "risk_score": 0.70,
+      "confidence_lo": 0.62,
+      "confidence_hi": 0.78,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 8.8, "cd_nm": 79.5, "overlay_nm": 5.1 },
+      "shap": [
+        { "feature": "overlay_nm", "value": 5.1, "contribution": 0.16 },
+        { "feature": "focus_offset_nm", "value": 8.8, "contribution": 0.14 },
+        { "feature": "cd_nm", "value": 79.5, "contribution": 0.10 },
+        { "feature": "reflectivity_pct", "value": 95.0, "contribution": 0.07 },
+        { "feature": "etch_rate_std", "value": 1.4, "contribution": 0.05 }
+      ]
+    },
+    {
+      "step_id": "s073",
+      "step_name": "ETCH_VIA5",
+      "category": "etch",
+      "risk_score": 0.29,
+      "confidence_lo": 0.21,
+      "confidence_hi": 0.37,
+      "duration_min": 45,
+      "sensors": { "etch_rate_mean": 55.5, "etch_rate_std": 1.1, "rf_power_w": 455 },
+      "shap": []
+    },
+    {
+      "step_id": "s074",
+      "step_name": "COPPER_SEED_M5",
+      "category": "deposition",
+      "risk_score": 0.12,
+      "confidence_lo": 0.04,
+      "confidence_hi": 0.20,
+      "duration_min": 20,
+      "sensors": { "temperature_c": 200, "pressure_mbar": 0.5, "deposition_rate": 5.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s075",
+      "step_name": "COPPER_PLATING_M5",
+      "category": "deposition",
+      "risk_score": 0.21,
+      "confidence_lo": 0.13,
+      "confidence_hi": 0.29,
+      "duration_min": 30,
+      "sensors": { "temperature_c": 25, "flow_slm": 0.8, "deposition_rate": 80.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s076",
+      "step_name": "CMP_CU_M5",
+      "category": "cmp",
+      "risk_score": 0.77,
+      "confidence_lo": 0.69,
+      "confidence_hi": 0.85,
+      "duration_min": 50,
+      "sensors": { "removal_rate_nm_min": 205, "planarity_nm": 14.8, "pressure_mbar": 4.3 },
+      "shap": [
+        { "feature": "planarity_nm", "value": 14.8, "contribution": 0.16 },
+        { "feature": "removal_rate_nm_min", "value": 206.5, "contribution": 0.14 },
+        { "feature": "etch_rate_std", "value": 2.0, "contribution": 0.11 },
+        { "feature": "pressure_mbar", "value": 4.4, "contribution": 0.09 },
+        { "feature": "particle_count", "value": 71, "contribution": 0.07 }
+      ]
+    },
+    {
+      "step_id": "s077",
+      "step_name": "DIFFUSION_BARRIER_M5",
+      "category": "deposition",
+      "risk_score": 0.17,
+      "confidence_lo": 0.09,
+      "confidence_hi": 0.25,
+      "duration_min": 15,
+      "sensors": { "temperature_c": 280, "pressure_mbar": 0.8, "deposition_rate": 1.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s078",
+      "step_name": "IMD6_DEP",
+      "category": "deposition",
+      "risk_score": 0.22,
+      "confidence_lo": 0.14,
+      "confidence_hi": 0.30,
+      "duration_min": 55,
+      "sensors": { "temperature_c": 376, "pressure_mbar": 2.0, "deposition_rate": 13.8 },
+      "shap": []
+    },
+    {
+      "step_id": "s079",
+      "step_name": "CMP_IMD6",
+      "category": "cmp",
+      "risk_score": 0.26,
+      "confidence_lo": 0.18,
+      "confidence_hi": 0.34,
+      "duration_min": 45,
+      "sensors": { "removal_rate_nm_min": 148, "planarity_nm": 9.2 },
+      "shap": []
+    },
+    {
+      "step_id": "s080",
+      "step_name": "LITHO_VIA6",
+      "category": "lithography",
+      "risk_score": 0.86,
+      "confidence_lo": 0.78,
+      "confidence_hi": 0.94,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 11.2, "cd_nm": 74.0, "overlay_nm": 6.5 },
+      "shap": [
+        { "feature": "overlay_nm", "value": 6.5, "contribution": 0.21 },
+        { "feature": "focus_offset_nm", "value": 11.2, "contribution": 0.18 },
+        { "feature": "cd_nm", "value": 74.0, "contribution": 0.14 },
+        { "feature": "reflectivity_pct", "value": 92.0, "contribution": 0.10 },
+        { "feature": "particle_count", "value": 88, "contribution": 0.08 }
+      ]
+    },
+    {
+      "step_id": "s081",
+      "step_name": "ETCH_VIA6",
+      "category": "etch",
+      "risk_score": 0.32,
+      "confidence_lo": 0.24,
+      "confidence_hi": 0.40,
+      "duration_min": 45,
+      "sensors": { "etch_rate_mean": 54.0, "etch_rate_std": 1.3, "rf_power_w": 450 },
+      "shap": []
+    },
+    {
+      "step_id": "s082",
+      "step_name": "ALUMINUM_BOND_DEP",
+      "category": "deposition",
+      "risk_score": 0.27,
+      "confidence_lo": 0.19,
+      "confidence_hi": 0.35,
+      "duration_min": 30,
+      "sensors": { "temperature_c": 200, "pressure_mbar": 0.8, "deposition_rate": 25.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s083",
+      "step_name": "LITHO_BOND_PAD",
+      "category": "lithography",
+      "risk_score": 0.19,
+      "confidence_lo": 0.11,
+      "confidence_hi": 0.27,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 5, "cd_nm": 500.0, "overlay_nm": 4.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s084",
+      "step_name": "ETCH_BOND_PAD",
+      "category": "etch",
+      "risk_score": 0.73,
+      "confidence_lo": 0.65,
+      "confidence_hi": 0.81,
+      "duration_min": 35,
+      "sensors": { "etch_rate_mean": 35.0, "etch_rate_std": 1.8, "rf_power_w": 320 },
+      "shap": [
+        { "feature": "etch_rate_std", "value": 1.8, "contribution": 0.17 },
+        { "feature": "rf_power_w", "value": 322.0, "contribution": 0.14 },
+        { "feature": "etch_rate_mean", "value": 36.5, "contribution": 0.11 },
+        { "feature": "cd_nm", "value": 498.2, "contribution": 0.08 },
+        { "feature": "particle_count", "value": 55, "contribution": 0.06 }
+      ]
+    },
+    {
+      "step_id": "s085",
+      "step_name": "PASSIVATION_DEP",
+      "category": "deposition",
+      "risk_score": 0.24,
+      "confidence_lo": 0.16,
+      "confidence_hi": 0.32,
+      "duration_min": 45,
+      "sensors": { "temperature_c": 400, "pressure_mbar": 2.5, "deposition_rate": 10.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s086",
+      "step_name": "LITHO_PASSIVATION",
+      "category": "lithography",
+      "risk_score": 0.18,
+      "confidence_lo": 0.10,
+      "confidence_hi": 0.26,
+      "duration_min": 65,
+      "sensors": { "focus_offset_nm": 6, "cd_nm": 520.0, "overlay_nm": 4.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s087",
+      "step_name": "ETCH_PASSIVATION",
+      "category": "etch",
+      "risk_score": 0.88,
+      "confidence_lo": 0.80,
+      "confidence_hi": 0.96,
+      "duration_min": 40,
+      "sensors": { "etch_rate_mean": 32.0, "etch_rate_std": 3.1, "rf_power_w": 290 },
+      "shap": [
+        { "feature": "etch_rate_std", "value": 3.1, "contribution": 0.25 },
+        { "feature": "rf_power_w", "value": 288.0, "contribution": 0.20 },
+        { "feature": "etch_rate_mean", "value": 31.5, "contribution": 0.15 },
+        { "feature": "pressure_mbar", "value": 5.2, "contribution": 0.11 },
+        { "feature": "particle_count", "value": 102, "contribution": 0.09 }
+      ]
+    },
+    {
+      "step_id": "s088",
+      "step_name": "POST_ETCH_CLEAN",
+      "category": "cleaning",
+      "risk_score": 0.10,
+      "confidence_lo": 0.02,
+      "confidence_hi": 0.18,
+      "duration_min": 20,
+      "sensors": { "flow_slm": 2.2, "contact_angle_deg": 22 },
+      "shap": []
+    },
+    {
+      "step_id": "s089",
+      "step_name": "METROLOGY_YIELD_PROBE",
+      "category": "metrology",
+      "risk_score": 0.15,
+      "confidence_lo": 0.07,
+      "confidence_hi": 0.23,
+      "duration_min": 120,
+      "sensors": { "sheet_res_ohm_sq": 15.2, "cd_nm": 28.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s090",
+      "step_name": "IMPLANT_WELL_N",
+      "category": "implant",
+      "risk_score": 0.70,
+      "confidence_lo": 0.62,
+      "confidence_hi": 0.78,
+      "duration_min": 15,
+      "sensors": { "dose_cm2": 8.0e12, "energy_kev": 200 },
+      "shap": [
+        { "feature": "dose_cm2", "value": 8.2e12, "contribution": 0.15 },
+        { "feature": "energy_kev", "value": 202.5, "contribution": 0.12 },
+        { "feature": "particle_count", "value": 48, "contribution": 0.09 },
+        { "feature": "sheet_res_ohm_sq", "value": 45.0, "contribution": 0.07 },
+        { "feature": "contact_angle_deg", "value": 18.5, "contribution": 0.05 }
+      ]
+    },
+    {
+      "step_id": "s091",
+      "step_name": "ANNEAL_WELL",
+      "category": "anneal",
+      "risk_score": 0.14,
+      "confidence_lo": 0.06,
+      "confidence_hi": 0.22,
+      "duration_min": 20,
+      "sensors": { "temperature_c": 900, "pressure_mbar": 760 },
+      "shap": []
+    },
+    {
+      "step_id": "s092",
+      "step_name": "SURFACE_CLEAN_PREGATE",
+      "category": "cleaning",
+      "risk_score": 0.08,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.16,
+      "duration_min": 20,
+      "sensors": { "flow_slm": 3.0, "contact_angle_deg": 35 },
+      "shap": []
+    },
+    {
+      "step_id": "s093",
+      "step_name": "HIGH_K_GATE_DEP",
+      "category": "deposition",
+      "risk_score": 0.79,
+      "confidence_lo": 0.71,
+      "confidence_hi": 0.87,
+      "duration_min": 40,
+      "sensors": { "temperature_c": 300, "pressure_mbar": 0.3, "deposition_rate": 0.8 },
+      "shap": [
+        { "feature": "deposition_rate", "value": 0.65, "contribution": 0.20 },
+        { "feature": "temperature_c", "value": 302.1, "contribution": 0.17 },
+        { "feature": "thickness_nm", "value": 3.2, "contribution": 0.13 },
+        { "feature": "uniformity_pct", "value": 84.5, "contribution": 0.10 },
+        { "feature": "pressure_mbar", "value": 0.28, "contribution": 0.07 }
+      ]
+    },
+    {
+      "step_id": "s094",
+      "step_name": "METAL_GATE_DEP",
+      "category": "deposition",
+      "risk_score": 0.35,
+      "confidence_lo": 0.27,
+      "confidence_hi": 0.43,
+      "duration_min": 30,
+      "sensors": { "temperature_c": 400, "pressure_mbar": 0.5, "deposition_rate": 5.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s095",
+      "step_name": "CMP_METAL_GATE",
+      "category": "cmp",
+      "risk_score": 0.28,
+      "confidence_lo": 0.20,
+      "confidence_hi": 0.36,
+      "duration_min": 35,
+      "sensors": { "removal_rate_nm_min": 120, "planarity_nm": 5.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s096",
+      "step_name": "METROLOGY_GATE_CD",
+      "category": "metrology",
+      "risk_score": 0.11,
+      "confidence_lo": 0.03,
+      "confidence_hi": 0.19,
+      "duration_min": 30,
+      "sensors": { "cd_nm": 22.0, "overlay_nm": 1.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s097",
+      "step_name": "BACKSIDE_GRIND",
+      "category": "cmp",
+      "risk_score": 0.23,
+      "confidence_lo": 0.15,
+      "confidence_hi": 0.31,
+      "duration_min": 60,
+      "sensors": { "removal_rate_nm_min": 5000, "planarity_nm": 30.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s098",
+      "step_name": "BACKSIDE_METAL_DEP",
+      "category": "deposition",
+      "risk_score": 0.20,
+      "confidence_lo": 0.12,
+      "confidence_hi": 0.28,
+      "duration_min": 25,
+      "sensors": { "temperature_c": 180, "pressure_mbar": 0.6, "deposition_rate": 18.0 },
+      "shap": []
+    },
+    {
+      "step_id": "s099",
+      "step_name": "FINAL_METROLOGY",
+      "category": "metrology",
+      "risk_score": 0.09,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.17,
+      "duration_min": 90,
+      "sensors": { "sheet_res_ohm_sq": 14.8, "cd_nm": 27.5 },
+      "shap": []
+    },
+    {
+      "step_id": "s100",
+      "step_name": "WAFER_SORT",
+      "category": "metrology",
+      "risk_score": 0.07,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.15,
+      "duration_min": 120,
+      "sensors": { "particle_count": 12, "reflectivity_pct": 99.0 },
+      "shap": []
+    }
+  ],
+  "anomalies": [
+    {
+      "step_id": "s057",
+      "anomaly_score": 0.94,
+      "type": "deposition_drift"
+    },
+    {
+      "step_id": "s087",
+      "anomaly_score": 0.91,
+      "type": "etch_uniformity_failure"
+    },
+    {
+      "step_id": "s015",
+      "anomaly_score": 0.88,
+      "type": "implant_dose_excursion"
+    }
+  ]
+}

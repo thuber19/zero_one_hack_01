@@ -10,13 +10,13 @@ echo "============================================================"
 echo ""
 
 # ── 1. Load Python ──────────────────────────────────────────
-echo "[1/6] Loading Python 3.11.7..."
+echo "[1/7] Loading Python 3.11.7..."
 module load python/3.11.7
 echo "  ✓ $(python3 --version)"
 
 # ── 2. Create venv ──────────────────────────────────────────
 echo ""
-echo "[2/6] Creating venv at ~/zero_one_env..."
+echo "[2/7] Creating venv at ~/zero_one_env..."
 if [[ ! -d "$HOME/zero_one_env" ]]; then
     python3 -m venv "$HOME/zero_one_env"
 fi
@@ -28,16 +28,25 @@ echo "  ✓ numpy, pandas, matplotlib, scikit-learn, tqdm installed"
 
 # ── 3. Install pixi ─────────────────────────────────────────
 echo ""
-echo "[3/6] Installing pixi..."
+echo "[3/7] Installing pixi..."
 if ! command -v pixi &>/dev/null && [[ ! -f "$HOME/.pixi/bin/pixi" ]]; then
     curl -fsSL https://pixi.sh/install.sh | bash
 fi
 export PATH="$HOME/.pixi/bin:$PATH"
 echo "  ✓ pixi $(pixi --version)"
 
-# ── 4. Install Node.js + Claude Code ────────────────────────
+# ── 4. Install uv ───────────────────────────────────────────
 echo ""
-echo "[4/6] Installing Node.js via nvm..."
+echo "[4/7] Installing uv..."
+if ! command -v uv &>/dev/null && [[ ! -f "$HOME/.local/bin/uv" ]]; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+export PATH="$HOME/.local/bin:$PATH"
+echo "  ✓ uv $(uv --version)"
+
+# ── 5. Install Node.js + Claude Code ────────────────────────
+echo ""
+echo "[5/7] Installing Node.js via nvm..."
 if [[ ! -d "$HOME/.nvm" ]]; then
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 fi
@@ -58,7 +67,7 @@ echo "  ✓ Claude Code installed"
 
 # ── 5. Install starship ─────────────────────────────────────
 echo ""
-echo "[5/6] Installing starship..."
+echo "[6/7] Installing starship..."
 mkdir -p "$HOME/.local/bin"
 curl -sS https://starship.rs/install.sh | sh -s -- --bin-dir "$HOME/.local/bin" --yes
 echo "  ✓ $("$HOME/.local/bin/starship" --version)"
@@ -78,7 +87,7 @@ echo "  ✓ antidote + plugins ready"
 
 # ── 6. Write ~/.zshrc ───────────────────────────────────────
 echo ""
-echo "[6/6] Writing ~/.zshrc..."
+echo "[7/7] Writing ~/.zshrc..."
 cat > "$HOME/.zshrc" << 'ZSHRC'
 # PATH
 export PATH="$HOME/.local/bin:$HOME/.pixi/bin:$PATH"

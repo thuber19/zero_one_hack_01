@@ -1,0 +1,43 @@
+seed: 42
+
+model:
+  n_layers: 6
+  d_model: 256
+  n_heads: 8
+  d_ff: 1024
+  max_len: 100
+  dropout: 0.1
+
+optim:
+  lr: 1.0e-4
+  lr_min: 1.0e-5
+  betas: [0.9, 0.999]
+  weight_decay: 0.01
+  eps: 1.0e-8
+  grad_clip: 1.0
+  warmup_frac: 0.10
+
+train:
+  per_device_batch: 64
+  epochs: 20
+  early_stop_patience: 3
+  val_every_epochs: 1
+  ckpt_every_steps: 500
+  keep_recent_ckpts: 3
+  log_every_steps: 20
+  soft_walltime_hours: 4.0
+  # bfloat16 or fp16 or fp32
+  precision: bfloat16
+
+masking:
+  # random | span | param (param raises NotImplementedError)
+  strategy: random
+  mask_prob: 0.15
+  mask_token_frac: 0.80
+  random_token_frac: 0.10
+  # span masking params (used when strategy=span)
+  span_max_len: 5
+  min_seq_len_for_span: 10
+
+eval:
+  top_k: [1, 5]
