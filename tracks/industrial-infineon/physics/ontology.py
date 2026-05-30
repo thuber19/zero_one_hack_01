@@ -324,6 +324,7 @@ _KEYWORD_FALLBACK: list[tuple[str, str]] = [
     ("WASH",             CAT_CLEAN),
     ("RCA",              CAT_CLEAN),
     ("HF DIP",           CAT_CLEAN),
+    ("DESCUM",           CAT_CLEAN),   # plasma descum = residue removal (OOD-safe; no known step uses it)
 
     # ── C. Resist strip ──────────────────────────────────────────────────────
     ("STRIP",            CAT_STRIP),
@@ -353,6 +354,7 @@ _KEYWORD_FALLBACK: list[tuple[str, str]] = [
     # ── G. Deposition / growth (PASSIV here so "X PASSIVATION" deposits) ──────
     ("DEPOSIT",          CAT_DEPOSIT),
     ("GROW",             CAT_DEPOSIT),
+    ("NUCLEAT",          CAT_DEPOSIT),   # nucleation / seed-layer growth (ALD etc.)
     ("EPITAX",           CAT_DEPOSIT),
     ("OXIDAT",           CAT_DEPOSIT),
     ("OXIDIS",           CAT_DEPOSIT),   # British spelling
@@ -372,6 +374,7 @@ _KEYWORD_FALLBACK: list[tuple[str, str]] = [
     # ── I. Planarisation / grind / fill ──────────────────────────────────────
     ("CMP",              CAT_CMP),
     ("PLANAR",           CAT_CMP),
+    ("POLISH",           CAT_CMP),   # chemical-mechanical polish synonym
     ("GRIND",            CAT_GRIND),
     ("FILL",             CAT_FILL),
 

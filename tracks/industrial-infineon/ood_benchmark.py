@@ -179,6 +179,32 @@ def main():
             for kind, ff, info in ex:
                 print(f"    {kind}: {info}")
 
+    # ── ONE-NOVEL-TOKEN robustness: a single unknown step inserted into an
+    #    otherwise in-vocab sequence must NOT flip the verdict (no weak logic). ──
+    print("\nOne-novel-token robustness (single unknown step inserted):")
+    rng2 = random.Random(args.seed + 7)
+    # genuinely INERT novel steps (inspection/metrology) — these are neither a
+    # rule trigger nor an enabler, so inserting one must never change the verdict.
+    # (A novel DEPOSITION legitimately WOULD need a clean, so it is not "benign".)
+    novel_benign = ["INSPECT NOVEL FEATURE", "MEASURE XENULON THICKNESS",
+                    "INSPECT XENULON SURFACE", "MEASURE NOVEL OVERLAY"]
+    vfp = 0
+    for s in valid_seqs:
+        s2 = list(s); s2.insert(rng2.randrange(1, len(s2)), rng2.choice(novel_benign))
+        if ENGINE(s2):
+            vfp += 1
+    bmiss = 0
+    for rec in bad_recs:
+        s2 = list(rec["steps"]); s2.insert(rng2.randrange(1, len(s2)), rng2.choice(novel_benign))
+        if not ENGINE(s2):
+            bmiss += 1
+    print(f"  valid+1 novel token  -> still valid: {len(valid_seqs)-vfp}/{len(valid_seqs)} "
+          f"(false positives: {vfp})")
+    print(f"  invalid+1 novel token -> still caught: {len(bad_recs)-bmiss}/{len(bad_recs)} "
+          f"(violations lost: {bmiss})")
+    print("  (a single novel token must not create or hide a violation; "
+          "the routing/category engine handles known + novel steps together.)")
+
 
 if __name__ == "__main__":
     main()
