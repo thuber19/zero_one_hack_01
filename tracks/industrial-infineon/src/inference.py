@@ -52,6 +52,11 @@ class ProcessPredictor:
         # Physics layer: model proposes, physics disposes. category_mode="off"
         # = pure physical legality (no learned-grammar dependency), safe for OOD.
         self.refinery = PhysicsRefinery(category_mode="off")
+        # Real (non-special) step names, used to guarantee Task-1 ranks are
+        # always valid step strings (never "[UNK]") even if a prediction pool is
+        # short.
+        self._real_steps = [t for t in tokenizer.id2token.values()
+                            if not (t.startswith("[") and t.endswith("]"))]
 
     @classmethod
     def load(cls, output_dir: Path, model_size: str = "small", device: str = "cpu"):
@@ -150,6 +155,16 @@ class ProcessPredictor:
             results = [(n, prob_of.get(n, 0.0)) for n in reranked]
         else:
             results = cand[:top_k]
+
+        # Guarantee top_k REAL step names (never "[UNK]"): if the pool was short
+        # (e.g. an aggressive RF mask), fill with the next real vocab steps.
+        if len(results) < top_k:
+            have = {n for n, _ in results}
+            for s in self._real_steps:
+                if s not in have:
+                    results.append((s, 0.0)); have.add(s)
+                    if len(results) >= top_k:
+                        break
 
         return results
 

@@ -100,7 +100,9 @@ class StepCandidateForest:
             raise RuntimeError("Forest not trained yet. Call train() first.")
 
         family_id_map = {"mosfet": 0, "igbt": 1, "ic": 2}
-        fam_id = family_id_map[family.lower()]
+        # ASSUMPTION: family ∈ {mosfet,igbt,ic}. The hidden 4th family is unseen,
+        # so use a sentinel (-1) rather than crashing (see ASSUMPTIONS.md A3).
+        fam_id = family_id_map.get(family.lower(), -1)
         curr_id = self.tokenizer.encode_step(current_step)
         prev1 = self.tokenizer.encode_step(prev_steps[-1]) if len(prev_steps) >= 1 else 0
         prev2 = self.tokenizer.encode_step(prev_steps[-2]) if len(prev_steps) >= 2 else 0
@@ -135,6 +137,11 @@ class StepCandidateForest:
         Get a binary mask of shape (vocab_size,) where 1 = allowed candidate.
         Used to mask transformer logits.
         """
+        # For an UNSEEN family (Task 4), the RF was never trained on it, so its
+        # candidate set is meaningless — return an all-permissive mask and let
+        # the transformer + physics layer decide. (ASSUMPTIONS.md A3.)
+        if family.lower() not in ("mosfet", "igbt", "ic"):
+            return np.ones(vocab_size, dtype=np.float32)
         candidates = self.get_candidates(
             family, current_step, prev_steps, litho_level, position_frac
         )

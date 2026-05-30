@@ -62,12 +62,18 @@ from inference import ProcessPredictor
 # ── Self-eval: create our own eval set ────────────────────────────────────
 
 def create_self_eval_set(
-    n_per_family: int = 50,
+    n_per_family: int = 100,
     seed: int = 99999,
 ) -> tuple[list[dict], list[dict]]:
     """
     Generate held-out sequences for self-evaluation.
     Returns (valid_eval_rows, anomaly_eval_rows).
+
+    ASSUMPTION: this MIRRORS the official eval distribution documented in
+    generation_rules.md §5.1 (100 held-out sequences per family x {0.6, 0.8}
+    cut-points = 600 valid rows; a mixed valid/invalid anomaly set spanning all
+    10 rule types). It is NOT the official eval set (organizers distribute that
+    at the event). See ASSUMPTIONS.md (A1, A9).
     """
     rng = random.Random(seed)
 
@@ -106,18 +112,21 @@ def create_self_eval_set(
                 "_rule": "",
             })
 
-        # Task 3: generate anomalous sequences by injecting violations
-        for seq in seqs[:n_per_family // 2]:
-            mutated, rule = inject_violation(seq, rng)
-            if mutated is not None:
-                example_id += 1
-                anomaly_rows.append({
-                    "EXAMPLE_ID": f"self_{example_id:04d}",
-                    "FAMILY": family.upper(),
-                    "SEQUENCE": "|".join(mutated),
-                    "_is_valid": False,
-                    "_rule": rule,
-                })
+    # Task 3: invalid sequences spanning ALL 10 rule types (not just 3) via the
+    # comprehensive bad-data generator — reference-labelled, so _rule is ground
+    # truth. This makes the self-eval anomaly set representative of the official
+    # set's rule coverage.
+    import bad_data_generator as _bdg
+    bad, _ = _bdg.build(per_combo=max(2, n_per_family // 8), seed=seed + 1)
+    for r in bad:
+        example_id += 1
+        anomaly_rows.append({
+            "EXAMPLE_ID": f"self_{example_id:04d}",
+            "FAMILY": r["family"],
+            "SEQUENCE": "|".join(r["steps"]),
+            "_is_valid": False,
+            "_rule": r["first_rule"],
+        })
 
     rng.shuffle(anomaly_rows)
     return valid_rows, anomaly_rows
@@ -339,7 +348,8 @@ def levenshtein(s1: list, s2: list) -> int:
 
 # ── Main evaluation pipeline ─────────────────────────────────────────────
 
-def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cpu"):
+def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cpu",
+                  n_per_family: int = 100):
     """Run evaluation using self-generated held-out data."""
     print("=== Self-Evaluation ===\n")
 
@@ -349,7 +359,7 @@ def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cp
 
     # Create eval set
     print("Generating held-out eval set...")
-    valid_rows, anomaly_rows = create_self_eval_set(n_per_family=50)
+    valid_rows, anomaly_rows = create_self_eval_set(n_per_family=n_per_family)
     print(f"  Valid eval: {len(valid_rows)} rows")
     print(f"  Anomaly eval: {len(anomaly_rows)} rows")
 
@@ -468,6 +478,9 @@ def main():
                         default=Path(os.environ.get("OUTPUT_DIR", "outputs")))
     parser.add_argument("--model-size", default="small")
     parser.add_argument("--device", default="cpu")
+    parser.add_argument("--n-per-family", type=int, default=100,
+                        help="held-out seqs/family (100 mirrors the official set; "
+                             "lower = faster on CPU).")
     parser.add_argument("--self-eval", action="store_true",
                         help="Run self-evaluation with held-out generated data")
     parser.add_argument("--eval-dir", type=Path, default=None,
@@ -475,7 +488,7 @@ def main():
     args = parser.parse_args()
 
     if args.self_eval or args.eval_dir is None:
-        run_self_eval(args.output_dir, args.model_size, args.device)
+        run_self_eval(args.output_dir, args.model_size, args.device, args.n_per_family)
     else:
         from inference import generate_all_submissions
         generate_all_submissions(args.output_dir, args.eval_dir, args.model_size, args.device)

@@ -44,8 +44,14 @@ class StepTokenizer:
         return self.token2id.get(step, UNK_ID)
 
     def encode_sequence(self, steps: list[str], family: str) -> list[int]:
-        """Encode a sequence with [BOS] + family_token + steps + [EOS]."""
-        ids = [BOS_ID, self.encode_step(FAMILY_TOKENS[family.lower()])]
+        """Encode a sequence with [BOS] + family_token + steps + [EOS].
+
+        ASSUMPTION: family is one of {mosfet, igbt, ic}. The hidden 4th family
+        (Task 4) will NOT be in FAMILY_TOKENS, so we fall back to [UNK] instead
+        of crashing with a KeyError. The physics layer is family-agnostic, so
+        this is safe; see ASSUMPTIONS.md (A3)."""
+        family_tok = FAMILY_TOKENS.get(family.lower(), "[UNK]")
+        ids = [BOS_ID, self.encode_step(family_tok)]
         for s in steps:
             ids.append(self.encode_step(s))
         ids.append(EOS_ID)
