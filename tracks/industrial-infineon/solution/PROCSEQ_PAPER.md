@@ -317,7 +317,7 @@ flowchart TB
     HY --> FIN["single submission:<br/>'the model decided' + 'the rules certify'"]
 ```
 
-> **Figure (3.3).** The two bets and their convergence. Pipeline A puts the logic in rules;
+> **Figure 3.** The two bets and their convergence. Pipeline A puts the logic in rules;
 > Pipeline B puts it in weights; the hybrid composes B's plausibility with A's guarantees.
 
 ---
@@ -430,7 +430,7 @@ flowchart LR
     classDef bad fill:#ffe1e1,stroke:#b42318;
 ```
 
-> **Figure (5.3).** Hard-negative twins drive the contrastive geometry: a valid route and
+> **Figure 4.** Hard-negative twins drive the contrastive geometry: a valid route and
 > its one-rule-broken twin are the *hardest* in-batch negatives, so pulling same-validity
 > embeddings together necessarily teaches the encoder the single discriminating feature —
 > the rule violation — rather than surface token statistics.
@@ -500,7 +500,7 @@ flowchart TB
     V -->|"IS_VALID, PREDICTED_RULE"| O3
 ```
 
-> **Figure 3.** The two reusable components (learned models, Physics Refinery) wired three
+> **Figure 5.** The two reusable components (learned models, Physics Refinery) wired three
 > ways. Task 2's validity guarantee comes from the symbolic side; Task 3's *graded* signal
 > comes from the neural side; Task 1 blends both with a light legal-first re-sort.
 
@@ -577,7 +577,7 @@ flowchart TD
     J -->|"yes"| K["emit guaranteed-valid suffix"]
 ```
 
-> **Figure 4.** Task-2 rule-vetoed beam search. Every surviving beam is legal by
+> **Figure 6.** Task-2 rule-vetoed beam search. Every surviving beam is legal by
 > construction; `repair()` rescues dead-ends so the search never has to emit an illegal
 > step to make progress. This is the one task where the symbolic component, not the model,
 > provides the headline guarantee.
