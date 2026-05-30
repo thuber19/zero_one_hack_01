@@ -15,6 +15,10 @@ import torch.nn.functional as F
 
 from tokenizer import StepTokenizer, FAMILY_TOKENS, BOS_ID, EOS_ID, PAD_ID
 from transformer_model import create_model, ProcessTransformer
+try:                       # LSTM model added on main; optional
+    from lstm_model import create_lstm_model
+except Exception:          # pragma: no cover
+    create_lstm_model = None
 from random_forest import StepCandidateForest
 
 # ── Physics integration (the merged symbolic harness) ──────────────────────
@@ -22,7 +26,7 @@ from random_forest import StepCandidateForest
 import sys as _sys
 from pathlib import Path as _Path
 _SUBROOT = _Path(__file__).resolve().parent.parent
-for _p in (str(_SUBROOT), str(_SUBROOT / "training_data")):
+for _p in (str(_SUBROOT), str(_SUBROOT / "data")):
     if _p not in _sys.path:
         _sys.path.insert(0, _p)
 from physics.state_machine import validate_sequence_combined, unknown_tokens as _unknown_tokens
@@ -74,15 +78,33 @@ class ProcessPredictor:
         transformer + physics alone instead of failing on a clean checkout)."""
         import json
         tokenizer = StepTokenizer.load(output_dir / "tokenizer.txt")
+        # Architecture + size: prefer training_history.json (written by the merged
+        # train.py, supports arch=transformer|lstm), fall back to model_config.json.
+        arch = "transformer"
+        hist = output_dir / "training_history.json"
+        if hist.exists():
+            try:
+                _cfg = json.loads(hist.read_text()).get("config", {})
+                arch = _cfg.get("arch", arch)
+                model_size = _cfg.get("model_size", model_size)
+            except Exception:
+                pass
         cfg = output_dir / "model_config.json"
         if cfg.exists():
             try:
                 model_size = json.loads(cfg.read_text()).get("model_size", model_size)
             except Exception:
                 pass
-        model = create_model(tokenizer.vocab_size, size=model_size)
-        model.load_state_dict(torch.load(
-            output_dir / "best_transformer.pt", map_location=device, weights_only=True))
+        if arch == "lstm" and create_lstm_model is not None:
+            model = create_lstm_model(tokenizer.vocab_size, size=model_size)
+        else:
+            model = create_model(tokenizer.vocab_size, size=model_size)
+        # checkpoint name: merged train.py writes best_model.pt; older runs wrote
+        # best_transformer.pt — accept either.
+        ckpt = output_dir / "best_model.pt"
+        if not ckpt.exists():
+            ckpt = output_dir / "best_transformer.pt"
+        model.load_state_dict(torch.load(ckpt, map_location=device, weights_only=True))
         rf = StepCandidateForest()
         rf_path = output_dir / "random_forest.pkl"
         if rf_path.exists():
@@ -510,7 +532,7 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).parent.parent / "outputs")
-    parser.add_argument("--eval-dir", type=Path, default=Path(__file__).parent.parent / "training_data")
+    parser.add_argument("--eval-dir", type=Path, default=Path(__file__).parent.parent / "data")
     parser.add_argument("--model-size", default="small")
     parser.add_argument("--device", default="cpu")
     args = parser.parse_args()

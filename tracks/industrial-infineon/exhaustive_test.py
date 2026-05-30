@@ -31,7 +31,7 @@ from pathlib import Path
 
 _REPO = Path(__file__).parent
 sys.path.insert(0, str(_REPO))
-sys.path.insert(0, str(_REPO / "training_data"))
+sys.path.insert(0, str(_REPO / "data"))
 
 for _s in (sys.stdout, sys.stderr):
     try:
@@ -73,7 +73,7 @@ class Report:
 
 def test_real_data(rep: Report):
     print("\n[1] REAL provided data (every known-good sequence must pass)")
-    data_dir = _REPO / "training_data"
+    data_dir = _REPO / "data"
     total = ref_fp = eng_fp = 0
     for fam in ("MOSFET", "IGBT", "IC"):
         path = data_dir / f"{fam}_variants.csv"

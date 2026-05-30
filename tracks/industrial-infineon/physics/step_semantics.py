@@ -31,7 +31,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 _HERE = Path(__file__).parent
-_DATA = _HERE.parent / "training_data"
+_DATA = _HERE.parent / "data"
 sys.path.insert(0, str(_HERE.parent))
 
 

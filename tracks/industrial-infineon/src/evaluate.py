@@ -26,7 +26,7 @@ from collections import defaultdict
 import numpy as np
 import torch
 
-TRAINING_DATA_DIR = Path(__file__).resolve().parent.parent / "training_data"
+TRAINING_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 sys.path.insert(0, str(TRAINING_DATA_DIR))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # for physics.*
 

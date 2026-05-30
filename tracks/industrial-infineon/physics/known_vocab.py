@@ -1,5 +1,5 @@
 """Canonical shared step vocabulary (auto-generated from the provided
-training_data/*_variants.csv + synthetic*.csv). Used to route validation:
+data/*_variants.csv + synthetic*.csv). Used to route validation:
 a sequence whose steps are ALL in this set is scored by the exact reference
 checker (grader-equivalent, proven by differential_fuzz.py); a sequence with
 ANY step outside this set is routed to the category engine, which generalises

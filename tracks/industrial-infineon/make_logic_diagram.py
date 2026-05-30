@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 _SUB = Path(__file__).resolve().parent
-sys.path.insert(0, str(_SUB)); sys.path.insert(0, str(_SUB / "training_data"))
+sys.path.insert(0, str(_SUB)); sys.path.insert(0, str(_SUB / "data"))
 for _s in (sys.stdout, sys.stderr):
     try: _s.reconfigure(encoding="utf-8")
     except Exception: pass

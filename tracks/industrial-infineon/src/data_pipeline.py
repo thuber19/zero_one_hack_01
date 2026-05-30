@@ -1,9 +1,9 @@
 """
-Data pipeline: load existing CSVs, generate more data, build tokenizer,
-create PyTorch datasets for transformer training and feature matrices
-for random forest training.
+Data pipeline: load CSVs, create PyTorch datasets for training,
+extract features for random forest.
 """
 
+import csv
 import sys
 from pathlib import Path
 from collections import defaultdict
@@ -12,23 +12,23 @@ import torch
 from torch.utils.data import Dataset
 import numpy as np
 
-# Add training_data dir so we can import generate_sequences
-TRAINING_DATA_DIR = Path(__file__).resolve().parent.parent / "training_data"
-sys.path.insert(0, str(TRAINING_DATA_DIR))
+# Add src/ and data/ to path
+_SRC_DIR = Path(__file__).resolve().parent
+DATA_DIR = _SRC_DIR.parent / "data"
+for _p in (str(_SRC_DIR), str(DATA_DIR)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
-from generate_sequences import (  # noqa: E402
-    generate_dataset,
-    read_csv_sequences,
-)
+from generate_sequences import generate_dataset, read_csv_sequences  # noqa: E402
 from tokenizer import StepTokenizer, FAMILY_TOKENS, BOS_ID, EOS_ID, PAD_ID  # noqa: E402
 
 
-# ── Loading & generation ─────────────────────────────────────────────────
+# ── Loading ──────────────────────────────────────────────────────────────
 
 def load_existing_sequences(data_dir: Path | None = None) -> dict[str, list[list[str]]]:
     """Load pre-generated variant CSVs. Returns {family: [[step, ...], ...]}."""
     if data_dir is None:
-        data_dir = TRAINING_DATA_DIR
+        data_dir = DATA_DIR
     family_files = {
         "mosfet": "MOSFET_variants.csv",
         "igbt": "IGBT_variants.csv",
@@ -47,43 +47,32 @@ def load_existing_sequences(data_dir: Path | None = None) -> dict[str, list[list
     return result
 
 
-def generate_additional(family: str, count: int, seed: int = 12345) -> list[list[str]]:
-    """Generate additional sequences using the grammar."""
-    print(f"Generating {count} additional {family.upper()} sequences (seed={seed})...")
-    return generate_dataset(family, count, seed=seed, validate=True)
-
-
-def prepare_all_data(
-    extra_per_family: int = 5000,
-    seed: int = 12345,
-) -> tuple[dict[str, list[list[str]]], StepTokenizer]:
+def load_train_csv(path: Path) -> list[tuple[str, list[str]]]:
     """
-    Load existing + generate extra sequences. Build tokenizer.
-    Returns (family_sequences, tokenizer).
+    Load train_sequences.csv (SEQUENCE_ID, FAMILY, STEP long format).
+    Returns list of (family, [step, ...]) pairs.
     """
-    family_seqs = load_existing_sequences()
+    sequences: dict[str, tuple[str, list[str]]] = {}  # seq_id -> (family, steps)
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            sid = row["SEQUENCE_ID"].strip()
+            family = row["FAMILY"].strip().lower()
+            step = row["STEP"].strip()
+            if sid not in sequences:
+                sequences[sid] = (family, [])
+            sequences[sid][1].append(step)
 
-    # Generate extra data
-    for family in ["mosfet", "igbt", "ic"]:
-        existing = len(family_seqs[family])
-        if existing < extra_per_family:
-            extra = generate_additional(
-                family, extra_per_family - existing, seed=seed
-            )
-            family_seqs[family].extend(extra)
-
-    # Build tokenizer from all sequences
-    all_seqs = []
-    for seqs in family_seqs.values():
-        all_seqs.extend(seqs)
-    tokenizer = StepTokenizer.from_sequences(all_seqs)
-    print(f"\nTokenizer vocab size: {tokenizer.vocab_size}")
-    print(f"Total sequences: {sum(len(s) for s in family_seqs.values())}")
-
-    return family_seqs, tokenizer
+    result = list(sequences.values())
+    families = defaultdict(int)
+    for fam, _ in result:
+        families[fam] += 1
+    for fam, count in sorted(families.items()):
+        print(f"  {fam.upper()}: {count} sequences")
+    return result
 
 
-# ── PyTorch dataset for transformer ──────────────────────────────────────
+# ── PyTorch dataset ──────────────────────────────────────────────────────
 
 class ProcessSequenceDataset(Dataset):
     """
@@ -93,7 +82,7 @@ class ProcessSequenceDataset(Dataset):
 
     def __init__(
         self,
-        sequences: list[tuple[str, list[str]]],  # [(family, [step, ...]), ...]
+        sequences: list[tuple[str, list[str]]],
         tokenizer: StepTokenizer,
         max_len: int = 200,
     ):
@@ -112,11 +101,9 @@ class ProcessSequenceDataset(Dataset):
 
     def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
         ids = self.encoded[idx]
-        # Pad to max_len
         padded = ids + [PAD_ID] * (self.max_len - len(ids))
         input_ids = torch.tensor(padded[:-1], dtype=torch.long)
         target_ids = torch.tensor(padded[1:], dtype=torch.long)
-        # Attention mask: 1 for real tokens, 0 for padding
         attn_mask = torch.tensor(
             [1] * (len(ids) - 1) + [0] * (self.max_len - len(ids)),
             dtype=torch.long,
@@ -134,16 +121,9 @@ def extract_rf_features(
     sequences: list[tuple[str, list[str]]],
     tokenizer: StepTokenizer,
     context_size: int = 3,
+    max_samples: int = 5_000_000,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Extract (features, labels) for random forest training.
-
-    For each transition (step_t -> step_{t+1}) in each sequence, create:
-    - Features: [family_id, current_step_id, step_{t-1}_id, step_{t-2}_id, litho_level, position_frac]
-    - Label: next_step_id
-
-    Returns (X, y) numpy arrays.
-    """
+    """Extract (features, labels) for random forest. Caps at max_samples."""
     family_id_map = {"mosfet": 0, "igbt": 1, "ic": 2}
     X_rows = []
     y_rows = []
@@ -155,32 +135,32 @@ def extract_rf_features(
         litho_level = 0
 
         for t in range(n - 1):
-            # Track litho level
             if steps[t].startswith("ALIGN MASK LEVEL "):
                 parts = steps[t].split("ALIGN MASK LEVEL ")
                 if len(parts) > 1 and parts[1].isdigit():
                     litho_level = int(parts[1])
-
-            # Context: previous steps (padded with 0 if at start)
             prev1 = ids[t - 1] if t >= 1 else PAD_ID
             prev2 = ids[t - 2] if t >= 2 else PAD_ID
-
-            position_frac = t / n  # how far into the sequence
-
-            features = [fam_id, ids[t], prev1, prev2, litho_level, position_frac]
-            X_rows.append(features)
+            position_frac = t / n
+            X_rows.append([fam_id, ids[t], prev1, prev2, litho_level, position_frac])
             y_rows.append(ids[t + 1])
 
-    return np.array(X_rows, dtype=np.float32), np.array(y_rows, dtype=np.int64)
+    X = np.array(X_rows, dtype=np.float32)
+    y = np.array(y_rows, dtype=np.int64)
+
+    if len(X) > max_samples:
+        print(f"  Subsampling RF data: {len(X)} -> {max_samples} transitions")
+        rng = np.random.RandomState(42)
+        idx = rng.choice(len(X), max_samples, replace=False)
+        X, y = X[idx], y[idx]
+
+    return X, y
 
 
 def build_transition_map(
     sequences: list[tuple[str, list[str]]],
 ) -> dict[str, set[str]]:
-    """
-    Build a mapping: (family, current_step) -> set of observed next steps.
-    Used as a fallback/lookup for candidate generation.
-    """
+    """Build (family, current_step) -> set of observed next steps."""
     transitions: dict[str, set[str]] = defaultdict(set)
     for family, steps in sequences:
         for i in range(len(steps) - 1):

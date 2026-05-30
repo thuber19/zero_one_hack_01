@@ -31,7 +31,7 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(_ROOT))
-sys.path.insert(0, str(_ROOT / "training_data"))
+sys.path.insert(0, str(_ROOT / "data"))
 for _s in (sys.stdout, sys.stderr):
     try:
         _s.reconfigure(encoding="utf-8")
@@ -52,7 +52,7 @@ def reference(seq):
 def load_corpus():
     seqs = []
     vocab = set()
-    for p in sorted((_ROOT / "training_data").glob("*_variants.csv")):
+    for p in sorted((_ROOT / "data").glob("*_variants.csv")):
         for steps in read_csv_sequences(p).values():
             seqs.append(steps)
             vocab.update(steps)

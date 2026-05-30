@@ -27,7 +27,7 @@ from pathlib import Path
 
 _SRC = Path(__file__).resolve().parent
 _SUBROOT = _SRC.parent
-for _p in (str(_SRC), str(_SUBROOT), str(_SUBROOT / "training_data")):
+for _p in (str(_SRC), str(_SUBROOT), str(_SUBROOT / "data")):
     sys.path.insert(0, _p)
 
 from generate_sequences import generate_dataset, validate_sequence

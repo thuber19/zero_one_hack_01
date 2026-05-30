@@ -41,7 +41,7 @@ import sys
 from pathlib import Path
 
 _SUBROOT = Path(__file__).resolve().parent
-for _p in (str(_SUBROOT), str(_SUBROOT / "training_data")):
+for _p in (str(_SUBROOT), str(_SUBROOT / "data")):
     sys.path.insert(0, _p)
 for _s in (sys.stdout, sys.stderr):
     try:
@@ -270,7 +270,7 @@ def main():
     #    reported honestly, not skewed). This isolates "what the model knows" vs
     #    "what physics knows".
     print("\n--- n-gram model next-step on OOD families (trained only on MOSFET/IGBT/IC) ---")
-    model = build_model(data_dir=_SUBROOT / "training_data",
+    model = build_model(data_dir=_SUBROOT / "data",
                         cache_path=_SUBROOT / "models" / "tm.pkl")
     n = t1 = t5 = 0
     for fam, seq in good_rows:

@@ -25,7 +25,7 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(_ROOT))
-sys.path.insert(0, str(_ROOT / "training_data"))
+sys.path.insert(0, str(_ROOT / "data"))
 for _s in (sys.stdout, sys.stderr):
     try:
         _s.reconfigure(encoding="utf-8")
@@ -41,7 +41,7 @@ _FILES = {"mosfet": "MOSFET_variants.csv", "igbt": "IGBT_variants.csv", "ic": "I
 def load_valid_by_family():
     out = {}
     for fam, fname in _FILES.items():
-        p = _ROOT / "training_data" / fname
+        p = _ROOT / "data" / fname
         seqs = list(read_csv_sequences(p).values()) if p.exists() else []
         out[fam] = seqs
     return out

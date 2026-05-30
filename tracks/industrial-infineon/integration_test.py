@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 _SUBROOT = Path(__file__).resolve().parent
-for _p in (str(_SUBROOT), str(_SUBROOT / "training_data")):
+for _p in (str(_SUBROOT), str(_SUBROOT / "data")):
     sys.path.insert(0, _p)
 for _s in (sys.stdout, sys.stderr):
     try:
@@ -201,7 +201,7 @@ def bench(pred: StubPredictor):
 
 if __name__ == "__main__":
     print("Building stand-in model (n-gram; real run uses the transformer) …")
-    model = build_model(data_dir=_SUBROOT / "training_data",
+    model = build_model(data_dir=_SUBROOT / "data",
                         cache_path=_SUBROOT / "models" / "tm.pkl")
     pred = StubPredictor(model)
 

@@ -30,7 +30,7 @@ from typing import Optional
 
 # Make the repo root importable when this file is run standalone
 sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.path.insert(0, str(Path(__file__).parent.parent / "training_data"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "data"))
 
 from physics.process_knowledge import (
     WINDOWED_RULES,
@@ -272,7 +272,7 @@ def validate_sequence_combined(steps: list[str]) -> list[PhysicsViolation]:
         try:
             import sys
             from pathlib import Path
-            sys.path.insert(0, str(Path(__file__).parent.parent / "training_data"))
+            sys.path.insert(0, str(Path(__file__).parent.parent / "data"))
             from generate_sequences import validate_sequence as _det_validate
             return [PhysicsViolation(v.rule, v.step_index, v.step_name,
                                      v.description, "(deterministic rule check)")
@@ -342,7 +342,7 @@ if __name__ == "__main__":
             pass
 
     parent = Path(__file__).parent.parent
-    sys.path.insert(0, str(parent / "training_data"))
+    sys.path.insert(0, str(parent / "data"))
     from generate_sequences import generate_sequence, validate_sequence
 
     rng = random.Random(7)

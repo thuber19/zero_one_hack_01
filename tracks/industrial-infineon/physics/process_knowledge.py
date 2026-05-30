@@ -36,9 +36,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-# Make the repo root + training_data importable when run standalone.
+# Make the repo root + data importable when run standalone.
 sys.path.insert(0, str(Path(__file__).parent.parent))
-sys.path.insert(0, str(Path(__file__).parent.parent / "training_data"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "data"))
 
 from physics.ontology import (
     classify_step,

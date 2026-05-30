@@ -36,7 +36,7 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(_ROOT))
-sys.path.insert(0, str(_ROOT / "training_data"))
+sys.path.insert(0, str(_ROOT / "data"))
 for _s in (sys.stdout, sys.stderr):
     try:
         _s.reconfigure(encoding="utf-8")
@@ -175,7 +175,7 @@ def main():
 
     # reference-labelled corpus
     valid_all = []
-    for p in sorted((_ROOT / "training_data").glob("*_variants.csv")):
+    for p in sorted((_ROOT / "data").glob("*_variants.csv")):
         valid_all += list(read_csv_sequences(p).values())
     rng.shuffle(valid_all)
     valid_seqs = valid_all[: args.n_per_class]

@@ -15,7 +15,7 @@ import argparse, random, sys
 from pathlib import Path
 
 _SUB = Path(__file__).resolve().parent
-for _p in (str(_SUB), str(_SUB / "src"), str(_SUB / "training_data")):
+for _p in (str(_SUB), str(_SUB / "src"), str(_SUB / "data")):
     sys.path.insert(0, _p)
 for _s in (sys.stdout, sys.stderr):
     try: _s.reconfigure(encoding="utf-8")

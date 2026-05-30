@@ -25,7 +25,7 @@ from pathlib import Path
 
 _REPO = Path(__file__).parent
 sys.path.insert(0, str(_REPO))
-sys.path.insert(0, str(_REPO / "training_data"))
+sys.path.insert(0, str(_REPO / "data"))
 
 from physics.state_machine import WaferState, apply_step, validate_by_state_machine
 
