@@ -1,25 +1,39 @@
 #!/bin/bash
 #SBATCH --job-name=procseq-dec
-#SBATCH --account=__ACCOUNT__          # <-- fill: CINECA project account
-#SBATCH --partition=boost_usr_prod     # Leonardo Booster
-#SBATCH --qos=__QOS__                  # <-- fill if required
+#SBATCH --partition=boost_usr_prod
+#SBATCH --account=EUHPC_D30_031
+#SBATCH --reservation=s_tra_ncc
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gres=gpu:4
-#SBATCH --cpus-per-task=32
-#SBATCH --time=02:00:00
-#SBATCH --output=logs/dec_%j.out
+#SBATCH --gpus-per-task=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64GB
+#SBATCH --time=01:00:00
+#SBATCH --output=slurm-procseq-dec-%j.out
+#SBATCH --error=slurm-procseq-dec-%j.err
+#
+# Train the procseq decoder (Tasks 1+2) on one Leonardo Booster A100.
+# Submit from the solution dir, after running setup_leonardo.sh once:
+#   cd tracks/industrial-infineon/solution && sbatch slurm/train_decoder.sbatch
+# Single GPU + plain Accelerate (no DeepSpeed) — the models are small; DeepSpeed
+# is only used by the scaling sweep. Override CONFIG=... to change preset.
 
 set -euo pipefail
-module load profile/deeplrn || true
-module load python cuda || true        # <-- adjust to available Leonardo modules
+cd "${SLURM_SUBMIT_DIR}"
 source "${VENV:-$HOME/procseq-venv}/bin/activate"
-
-cd "${SOLUTION_DIR:-$SLURM_SUBMIT_DIR}"
-export OMP_NUM_THREADS=8
+export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-8}"
+export TOKENIZERS_PARALLELISM=false
 CONFIG="${CONFIG:-configs/leonardo_decoder.yaml}"
 
-srun accelerate launch \
-  --config_file configs/accelerate.yaml \
-  --num_processes ${SLURM_GPUS_ON_NODE:-4} \
-  -m procseq.train_decoder --config "$CONFIG"
+echo "node=$(hostname) gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo N/A) started=$(date)"
+
+# Build training/eval data + tokenizer first (no GPU needed, fast).
+python -m procseq.build_data --n-per-family 5000 --seed 42
+
+srun accelerate launch --num_processes 1 -m procseq.train_decoder --config "$CONFIG"
+
+# Produce Task 1+2 submissions and self-score.
+python -m procseq.infer --task 1 --config "$CONFIG"
+python -m procseq.infer --task 2 --config "$CONFIG"
+python -m procseq.run_eval --config "$CONFIG"
+echo "=== DONE $(date) — see artifacts/metrics.json + artifacts/submission_task{1,2}.csv ==="
