@@ -48,11 +48,19 @@ def main() -> int:
     model, tokenizer = load_model(args.checkpoint, device)
 
     data_dir = Path(args.data_dir)
-    csv_paths = {
-        v: data_dir / f"{v}_variants.csv"
-        for v in ("IC", "IGBT", "MOSFET")
-        if (data_dir / f"{v}_variants.csv").exists()
+    csv_candidates = {
+        "IC":    [data_dir / "IC_large.csv",    data_dir / "IC_variants.csv"],
+        "IGBT":  [data_dir / "IGBT_large.csv",  data_dir / "IGBT_variants.csv"],
+        "MOSFET":[data_dir / "MOSFET_large.csv", data_dir / "MOSFET_variants.csv"],
     }
+    csv_paths = {}
+    for variant, candidates in csv_candidates.items():
+        for p in candidates:
+            if p.exists():
+                csv_paths[variant] = p
+                break
+    if not csv_paths:
+        raise FileNotFoundError(f"No variant CSVs found in {data_dir}")
     records = load_all_variants(csv_paths)
     by_key = {(v, sid): (v, steps) for v, sid, steps in records}
 
