@@ -44,22 +44,54 @@ echo ""
 read -p "Batch size [512]: " BATCH
 BATCH="${BATCH:-512}"
 
+# Random Forest
+echo ""
+echo "Use Random Forest candidate filtering?"
+echo "  1) Yes (default)"
+echo "  2) No"
+read -p "Choice [1-2]: " RF_CHOICE
+RF_CHOICE="${RF_CHOICE:-1}"
+if [ "$RF_CHOICE" = "2" ]; then
+    RF_FLAG="--no-rf"
+    RF_LABEL="OFF"
+else
+    RF_FLAG=""
+    RF_LABEL="ON"
+fi
+
+# Physics
+echo ""
+echo "Use Physics refinery (for eval only)?"
+echo "  1) No (default)"
+echo "  2) Yes"
+read -p "Choice [1-2]: " PHYS_CHOICE
+PHYS_CHOICE="${PHYS_CHOICE:-1}"
+if [ "$PHYS_CHOICE" = "2" ]; then
+    PHYS_FLAG="--physics"
+    PHYS_LABEL="ON"
+else
+    PHYS_FLAG=""
+    PHYS_LABEL="OFF"
+fi
+
 # Fixed settings
 GPUS=4
 MEM=$((120 * GPUS))
 CPUS=$((8 * GPUS))
-OUTPUT_NAME="${ARCH}_${SIZE}_e${EPOCHS}_d${DATA}"
-JOB_NAME="${ARCH}-${SIZE}-e${EPOCHS}-d${DATA}"
+OUTPUT_NAME="${ARCH}_${SIZE}_e${EPOCHS}_d${DATA}_rf${RF_LABEL}_phys${PHYS_LABEL}"
+JOB_NAME="${ARCH}-${SIZE}-e${EPOCHS}"
 
 echo ""
 echo "============================================"
 echo "  Submitting:"
-echo "    Arch:    $ARCH $SIZE"
-echo "    Epochs:  $EPOCHS (early stopping patience=20)"
-echo "    Data:    ${DATA}/family ($(( DATA * 3 )) total)"
-echo "    Batch:   $BATCH"
-echo "    GPUs:    $GPUS (${MEM}GB RAM, ${CPUS} CPUs)"
-echo "    Output:  \$SCRATCH/runs/$OUTPUT_NAME"
+echo "    Arch:     $ARCH $SIZE"
+echo "    Epochs:   $EPOCHS (early stopping patience=20)"
+echo "    Data:     ${DATA}/family ($(( DATA * 3 )) total)"
+echo "    Batch:    $BATCH"
+echo "    RF:       $RF_LABEL"
+echo "    Physics:  $PHYS_LABEL"
+echo "    GPUs:     $GPUS (${MEM}GB RAM, ${CPUS} CPUs)"
+echo "    Output:   \$SCRATCH/runs/$OUTPUT_NAME"
 echo "============================================"
 echo ""
 read -p "Submit? [Y/n]: " CONFIRM
@@ -96,6 +128,7 @@ export RUN="\$HOME/.pixi/bin/pixi run --as-is --manifest-path \$PROJECT_DIR/pixi
 
 echo "============================================"
 echo "  ${ARCH} ${SIZE} | ${EPOCHS} epochs | ${DATA}/family"
+echo "  RF: ${RF_LABEL} | Physics: ${PHYS_LABEL}"
 echo "  GPU: \$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo 'N/A')"
 echo "  Started: \$(date)"
 echo "============================================"
@@ -107,20 +140,20 @@ echo ""
     --output-dir "\$OUTPUT_DIR" \\
     --seed 42
 
-# Step 2: Train RF + model
+# Step 2: Train model (+ RF unless disabled)
 \$RUN python3 src/train.py \\
     --arch ${ARCH} \\
     --model-size ${SIZE} \\
     --epochs ${EPOCHS} \\
     --batch-size ${BATCH} \\
     --lr 3e-4 \\
-    --seed 42
+    --seed 42 ${RF_FLAG}
 
 # Step 3: Evaluate
 \$RUN python3 src/evaluate.py \\
     --self-eval \\
     --output-dir "\$OUTPUT_DIR" \\
-    --model-size ${SIZE}
+    --model-size ${SIZE} ${RF_FLAG} ${PHYS_FLAG}
 
 # Step 4: Plots
 \$RUN python3 src/plot_results.py \\
