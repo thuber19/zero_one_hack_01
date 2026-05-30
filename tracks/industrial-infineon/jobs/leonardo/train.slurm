@@ -4,6 +4,7 @@
 # Scale up: raise --gpus-per-task (<=4) and mem=120GB*gpus, cpus=8*gpus (see PDF).
 #SBATCH -J zeroone_train
 #SBATCH --partition=boost_usr_prod
+#SBATCH --account=EUHPC_D30_031
 #SBATCH --reservation=s_tra_ncc
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
