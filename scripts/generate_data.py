@@ -12,16 +12,21 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from tracks.industrial_infineon.training_data.generate_sequences import (
-    generate_dataset,
-    write_csv,
-)
+# Directory name contains a hyphen so it can't be imported as a package;
+# load the module directly from its file path instead.
+_gen_path = ROOT / "tracks/industrial-infineon/training_data/generate_sequences.py"
+_spec = importlib.util.spec_from_file_location("generate_sequences", _gen_path)
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+generate_dataset = _mod.generate_dataset
+write_csv = _mod.write_csv
 
 FAMILIES = ["mosfet", "igbt", "ic"]
 DEFAULT_COUNT = 21_000  # 21k × 3 = 63k total → ~50.4k training rows after 80/10/10 split
