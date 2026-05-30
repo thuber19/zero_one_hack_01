@@ -7,13 +7,23 @@ Usage:
 """
 
 import argparse
+import gc
 import json
 import os
+import sys
 import time
 from pathlib import Path
 
 import torch
 from torch.utils.data import DataLoader, random_split
+
+# Ensure src/ and training_data/ are importable
+_SRC_DIR = Path(__file__).resolve().parent
+_PROJECT_DIR = _SRC_DIR.parent
+_TRAINING_DIR = _PROJECT_DIR / "training_data"
+for _p in (str(_SRC_DIR), str(_TRAINING_DIR)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 from data_pipeline import ProcessSequenceDataset
 from tokenizer import StepTokenizer
@@ -24,7 +34,7 @@ from random_forest import StepCandidateForest
 
 OUTPUT_DIR = Path(os.environ.get(
     "OUTPUT_DIR",
-    str(Path(__file__).resolve().parent.parent / "outputs"),
+    str(_PROJECT_DIR / "outputs"),
 ))
 
 
@@ -52,7 +62,7 @@ def load_pregenerated_data(output_dir: Path) -> tuple[dict[str, list[list[str]]]
     return family_seqs, tokenizer
 
 
-def train_transformer(
+def train_model(
     model: torch.nn.Module,
     train_loader: DataLoader,
     val_loader: DataLoader,
@@ -62,7 +72,7 @@ def train_transformer(
     save_dir: Path = OUTPUT_DIR,
     patience: int = 20,
 ) -> list[dict]:
-    """Train the transformer and return loss history."""
+    """Train any sequence model (transformer or LSTM) and return loss history."""
     model = model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
@@ -113,7 +123,6 @@ def train_transformer(
                 val_loss += loss.item()
                 n_val += 1
 
-                # Accuracy
                 logits = model(input_ids, attn_mask)
                 preds = logits.argmax(dim=-1)
                 mask = attn_mask[:, :preds.shape[1]].bool()
@@ -149,7 +158,7 @@ def train_transformer(
             best_val_loss = val_loss
             epochs_without_improvement = 0
             save_dir.mkdir(parents=True, exist_ok=True)
-            torch.save(model.state_dict(), save_dir / "best_transformer.pt")
+            torch.save(model.state_dict(), save_dir / "best_model.pt")
         else:
             epochs_without_improvement += 1
 
@@ -158,7 +167,7 @@ def train_transformer(
             break
 
     # Save final model
-    torch.save(model.state_dict(), save_dir / "final_transformer.pt")
+    torch.save(model.state_dict(), save_dir / "final_model.pt")
     return history
 
 
@@ -173,6 +182,7 @@ def main():
     parser.add_argument("--device", default=None,
                         help="Device (auto-detected if not set)")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--no-rf", action="store_true", help="Skip random forest training")
     args = parser.parse_args()
 
     torch.manual_seed(args.seed)
@@ -199,23 +209,23 @@ def main():
         for seq in seqs:
             all_pairs.append((family, seq))
 
-    # ── Step 2: Train Random Forest ──
-    print("\n=== Step 2: Training Random Forest ===")
-    rf = StepCandidateForest(n_estimators=50, max_depth=15, top_k=15)
-    rf_metrics = rf.train(all_pairs, tokenizer)
-    rf.save(OUTPUT_DIR / "random_forest.pkl")
-
-    # Free RF memory before transformer training
-    del rf
-    import gc
+    # ── Step 2: Train Random Forest (optional) ──
+    rf_metrics = {}
+    if not args.no_rf:
+        print("\n=== Step 2: Training Random Forest ===")
+        rf = StepCandidateForest(n_estimators=50, max_depth=15, top_k=15)
+        rf_metrics = rf.train(all_pairs, tokenizer)
+        rf.save(OUTPUT_DIR / "random_forest.pkl")
+        del rf
+    else:
+        print("\n=== Step 2: Random Forest SKIPPED ===")
     gc.collect()
 
-    # ── Step 3: Train Transformer ──
-    print("\n=== Step 3: Training Transformer ===")
+    # ── Step 3: Train model ──
+    print(f"\n=== Step 3: Training {args.arch.upper()} ===")
     dataset = ProcessSequenceDataset(all_pairs, tokenizer, max_len=200)
     print(f"Dataset size: {len(dataset)} sequences")
 
-    # Free raw data — dataset has its own encoded copy
     del all_pairs, family_seqs
     gc.collect()
 
@@ -241,7 +251,7 @@ def main():
     n_params = sum(p.numel() for p in model.parameters())
     print(f"Model: {args.arch} {args.model_size} ({n_params:,} parameters)")
 
-    history = train_transformer(
+    history = train_model(
         model, train_loader, val_loader,
         epochs=args.epochs, lr=args.lr, device=device,
         save_dir=OUTPUT_DIR,
@@ -260,15 +270,17 @@ def main():
                 "lr": args.lr,
                 "device": device,
                 "total_sequences": len(dataset),
+                "rf_enabled": not args.no_rf,
             },
             "rf_metrics": rf_metrics,
-            "transformer_history": history,
+            "history": history,
         }, f, indent=2, default=str)
 
     print(f"\n=== Training complete ===")
     print(f"  Best val loss: {min(h['val_loss'] for h in history):.4f}")
     print(f"  Best val acc:  {max(h['val_accuracy'] for h in history):.4f}")
-    print(f"  RF top-15 acc: {rf_metrics['top_15_accuracy']:.4f}")
+    if rf_metrics:
+        print(f"  RF top-15 acc: {rf_metrics.get('top_15_accuracy', 'N/A')}")
     print(f"  All outputs saved to {OUTPUT_DIR}")
 
 

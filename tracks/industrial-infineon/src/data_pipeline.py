@@ -12,10 +12,14 @@ import torch
 from torch.utils.data import Dataset
 import numpy as np
 
-# Add training_data dir so we can import generate_sequences
-TRAINING_DATA_DIR = Path(__file__).resolve().parent.parent / "training_data"
-sys.path.insert(0, str(TRAINING_DATA_DIR))
+# Add src/ and training_data/ to path
+_SRC_DIR = Path(__file__).resolve().parent
+TRAINING_DATA_DIR = _SRC_DIR.parent / "training_data"
+for _p in (str(_SRC_DIR), str(TRAINING_DATA_DIR)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
+from canonicalize import canonicalize_sequence  # noqa: E402
 from generate_sequences import (  # noqa: E402
     generate_dataset,
     read_csv_sequences,
@@ -39,7 +43,7 @@ def load_existing_sequences(data_dir: Path | None = None) -> dict[str, list[list
         p = data_dir / fname
         if p.exists():
             seqs = read_csv_sequences(p)
-            result[family] = list(seqs.values())
+            result[family] = [canonicalize_sequence(s) for s in seqs.values()]
             print(f"Loaded {len(result[family])} {family.upper()} sequences from {fname}")
         else:
             result[family] = []
@@ -48,9 +52,10 @@ def load_existing_sequences(data_dir: Path | None = None) -> dict[str, list[list
 
 
 def generate_additional(family: str, count: int, seed: int = 12345) -> list[list[str]]:
-    """Generate additional sequences using the grammar."""
+    """Generate additional sequences using the grammar, canonicalized."""
     print(f"Generating {count} additional {family.upper()} sequences (seed={seed})...")
-    return generate_dataset(family, count, seed=seed, validate=True)
+    seqs = generate_dataset(family, count, seed=seed, validate=True)
+    return [canonicalize_sequence(s) for s in seqs]
 
 
 def prepare_all_data(

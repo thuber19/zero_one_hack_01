@@ -29,9 +29,11 @@ TRAINING_DATA_DIR = Path(__file__).resolve().parent.parent / "training_data"
 sys.path.insert(0, str(TRAINING_DATA_DIR))
 
 from generate_sequences import generate_dataset, validate_sequence
+from canonicalize import canonicalize_sequence
 from data_pipeline import prepare_all_data
 from tokenizer import StepTokenizer, FAMILY_TOKENS, BOS_ID, EOS_ID, PAD_ID
-from transformer_model import create_model
+from transformer_model import create_model as create_transformer
+from lstm_model import create_lstm_model
 from random_forest import StepCandidateForest
 from inference import ProcessPredictor
 
@@ -54,7 +56,8 @@ def create_self_eval_set(
 
     for family in ["mosfet", "igbt", "ic"]:
         # Generate fresh sequences (different seed than training)
-        seqs = generate_dataset(family, n_per_family, seed=seed + hash(family) % 10000, validate=True)
+        seqs = [canonicalize_sequence(s) for s in
+                generate_dataset(family, n_per_family, seed=seed + hash(family) % 10000, validate=True)]
 
         for seq in seqs:
             # Task 1 & 2: partial sequences at 60% and 80%
@@ -293,15 +296,42 @@ def levenshtein(s1: list, s2: list) -> int:
 
 # ── Main evaluation pipeline ─────────────────────────────────────────────
 
-def run_baseline_eval(output_dir: Path, model_size: str = "small", device: str = "cpu"):
+def run_baseline_eval(output_dir: Path, model_size: str = "small", device: str = "cpu",
+                      use_rf: bool = True, use_physics: bool = False):
     """Run evaluation with an UNTRAINED model as baseline."""
     print("=== Baseline Evaluation (untrained model) ===\n")
 
     tokenizer = StepTokenizer.load(output_dir / "tokenizer.txt")
-    untrained_model = create_model(tokenizer.vocab_size, size=model_size)
-    rf = StepCandidateForest()
-    rf.load(output_dir / "random_forest.pkl", tokenizer)
-    baseline = ProcessPredictor(tokenizer, untrained_model, rf, device)
+
+    # Auto-detect arch from training history
+    arch = "transformer"
+    history_path = output_dir / "training_history.json"
+    if history_path.exists():
+        with open(history_path) as f:
+            config = json.load(f).get("config", {})
+        arch = config.get("arch", "transformer")
+        model_size = config.get("model_size", model_size)
+
+    if arch == "lstm":
+        untrained_model = create_lstm_model(tokenizer.vocab_size, size=model_size)
+    else:
+        untrained_model = create_transformer(tokenizer.vocab_size, size=model_size)
+
+    rf = None
+    if use_rf:
+        rf = StepCandidateForest()
+        rf_path = output_dir / "random_forest.pkl"
+        if rf_path.exists():
+            rf.load(rf_path, tokenizer)
+    refinery = None
+    if use_physics:
+        try:
+            from refinery import PhysicsRefinery
+            refinery = PhysicsRefinery(category_mode="soft")
+        except ImportError:
+            pass
+    baseline = ProcessPredictor(tokenizer, untrained_model, rf, refinery, device,
+                                use_rf=use_rf, use_physics=use_physics)
 
     valid_rows, anomaly_rows = create_self_eval_set(n_per_family=50)
 
@@ -335,17 +365,20 @@ def run_baseline_eval(output_dir: Path, model_size: str = "small", device: str =
     return baseline_metrics
 
 
-def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cpu"):
+def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cpu",
+                  use_rf: bool = True, use_physics: bool = False):
     """Run evaluation using self-generated held-out data."""
     print("=== Self-Evaluation ===\n")
+    print(f"  RF: {'ON' if use_rf else 'OFF'} | Physics: {'ON' if use_physics else 'OFF'}")
 
     # Run baseline first
-    baseline_metrics = run_baseline_eval(output_dir, model_size, device)
+    baseline_metrics = run_baseline_eval(output_dir, model_size, device, use_rf, use_physics)
 
     # Load trained model
     print("\n=== Trained Model Evaluation ===\n")
     print("Loading models...")
-    predictor = ProcessPredictor.load(output_dir, model_size=model_size, device=device)
+    predictor = ProcessPredictor.load(output_dir, model_size=model_size, device=device,
+                                      use_rf=use_rf, use_physics=use_physics)
 
     # Create eval set
     print("Generating held-out eval set...")
@@ -453,10 +486,13 @@ def main():
                         help="Run self-evaluation with held-out generated data")
     parser.add_argument("--eval-dir", type=Path, default=None,
                         help="Path to official eval files")
+    parser.add_argument("--no-rf", action="store_true", help="Disable random forest")
+    parser.add_argument("--physics", action="store_true", help="Enable physics refinery")
     args = parser.parse_args()
 
     if args.self_eval or args.eval_dir is None:
-        run_self_eval(args.output_dir, args.model_size, args.device)
+        run_self_eval(args.output_dir, args.model_size, args.device,
+                      use_rf=not args.no_rf, use_physics=args.physics)
     else:
         from inference import generate_all_submissions
         generate_all_submissions(args.output_dir, args.eval_dir, args.model_size, args.device)
