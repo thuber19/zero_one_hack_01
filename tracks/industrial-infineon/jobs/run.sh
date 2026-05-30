@@ -31,14 +31,11 @@ submit_procseq() {
         exit 1
     fi
 
-    # Create the 'procseq' pixi env ONCE on the LOGIN node (compute nodes have no internet).
-    # Skip if it already exists from a previous run -- nothing to download.
-    if [ -d "$PROJECT_DIR/.pixi/envs/procseq" ]; then
-        echo "procseq pixi environment already present -> skipping install."
-    else
-        echo "Creating the 'procseq' pixi environment (login node, one-time, ~5 min)..."
-        "$PIXI" install --manifest-path "$PROJECT_DIR/pixi.toml" -e procseq || { echo "pixi install failed"; exit 1; }
-    fi
+    # Ensure the 'procseq' pixi env is present + up to date on the LOGIN node (compute
+    # nodes have no internet). Idempotent: fast when nothing changed, re-solves only when
+    # pixi.toml/lock changed (e.g. a torch version fix) -- so always run it.
+    echo "Ensuring the 'procseq' pixi environment is up to date (login node)..."
+    "$PIXI" install --manifest-path "$PROJECT_DIR/pixi.toml" -e procseq || { echo "pixi install failed"; exit 1; }
 
     mkdir -p "$OUTDIR"
 
@@ -104,14 +101,14 @@ echo "node=\$(hostname) gpu=\$(nvidia-smi --query-gpu=name --format=csv,noheader
 \$RUN python -m procseq.build_data --n-per-family ${PDATA} --seed 42
 
 if [ "${WHICH}" = "decoder" ]; then
-  \$RUN accelerate launch --num_processes 1 -m procseq.train_decoder --config "${CFG}"
+  \$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_decoder --config "${CFG}"
   \$RUN python -m procseq.infer --task 1 --config "${CFG}"
   \$RUN python -m procseq.infer --task 2 --config "${CFG}"
   \$RUN python -m procseq.run_eval --config "${CFG}"
   \$RUN python -m procseq.infer --task 1 --real --config "${CFG}"
   \$RUN python -m procseq.infer --task 2 --real --config "${CFG}"
 else
-  \$RUN accelerate launch --num_processes 1 -m procseq.train_encoder --config "${CFG}"
+  \$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_encoder --config "${CFG}"
   \$RUN python -m procseq.infer --task 3 --config "${CFG}"
   \$RUN python -m procseq.run_eval --config "${CFG}"
   \$RUN python -m procseq.infer --task 3 --real --config "${CFG}"
