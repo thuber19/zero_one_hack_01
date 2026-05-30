@@ -168,8 +168,9 @@ class MLMMaskingCollator:
             i for i in range(tokenizer.vocab_size) if i not in self._special_ids
         ]
 
-    def __call__(self, batch: list[torch.Tensor]) -> dict[str, torch.Tensor]:
-        input_ids = torch.stack(batch)  # [B, T]
+    def __call__(self, batch) -> dict[str, torch.Tensor]:
+        # DataLoader default-collates items into [B, T] already; list form also accepted.
+        input_ids = batch if isinstance(batch, torch.Tensor) else torch.stack(batch)
         labels = torch.full_like(input_ids, -100)
         masked_input = input_ids.clone()
         B, T = input_ids.shape
