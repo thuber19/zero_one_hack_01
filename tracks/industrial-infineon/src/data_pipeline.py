@@ -134,9 +134,11 @@ def extract_rf_features(
     sequences: list[tuple[str, list[str]]],
     tokenizer: StepTokenizer,
     context_size: int = 3,
+    max_samples: int = 5_000_000,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Extract (features, labels) for random forest training.
+    Caps at max_samples to avoid OOM. Samples uniformly if needed.
 
     For each transition (step_t -> step_{t+1}) in each sequence, create:
     - Features: [family_id, current_step_id, step_{t-1}_id, step_{t-2}_id, litho_level, position_frac]
@@ -171,7 +173,18 @@ def extract_rf_features(
             X_rows.append(features)
             y_rows.append(ids[t + 1])
 
-    return np.array(X_rows, dtype=np.float32), np.array(y_rows, dtype=np.int64)
+    X = np.array(X_rows, dtype=np.float32)
+    y = np.array(y_rows, dtype=np.int64)
+
+    # Subsample if too large to avoid OOM
+    if len(X) > max_samples:
+        print(f"  Subsampling RF data: {len(X)} -> {max_samples} transitions")
+        rng = np.random.RandomState(42)
+        idx = rng.choice(len(X), max_samples, replace=False)
+        X = X[idx]
+        y = y[idx]
+
+    return X, y
 
 
 def build_transition_map(

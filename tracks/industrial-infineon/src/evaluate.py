@@ -293,11 +293,57 @@ def levenshtein(s1: list, s2: list) -> int:
 
 # ── Main evaluation pipeline ─────────────────────────────────────────────
 
+def run_baseline_eval(output_dir: Path, model_size: str = "small", device: str = "cpu"):
+    """Run evaluation with an UNTRAINED model as baseline."""
+    print("=== Baseline Evaluation (untrained model) ===\n")
+
+    tokenizer = StepTokenizer.load(output_dir / "tokenizer.txt")
+    untrained_model = create_model(tokenizer.vocab_size, size=model_size)
+    rf = StepCandidateForest()
+    rf.load(output_dir / "random_forest.pkl", tokenizer)
+    baseline = ProcessPredictor(tokenizer, untrained_model, rf, device)
+
+    valid_rows, anomaly_rows = create_self_eval_set(n_per_family=50)
+
+    # Task 1 baseline
+    print("--- Baseline Task 1: Next-step prediction ---")
+    task1_preds = []
+    for row in valid_rows:
+        partial = row["PARTIAL_SEQUENCE"].split("|")
+        family = row["FAMILY"].lower()
+        preds = baseline.predict_next_steps(partial, family, top_k=5)
+        while len(preds) < 5:
+            preds.append(("[UNK]", 0.0))
+        task1_preds.append({
+            "EXAMPLE_ID": row["EXAMPLE_ID"],
+            **{f"RANK_{i+1}": preds[i][0] for i in range(5)},
+        })
+    task1_metrics = compute_nextstep_metrics(task1_preds, valid_rows)
+    print(f"  Top-1 Accuracy: {task1_metrics['top1_accuracy']:.4f}")
+    print(f"  Top-3 Accuracy: {task1_metrics['top3_accuracy']:.4f}")
+    print(f"  Top-5 Accuracy: {task1_metrics['top5_accuracy']:.4f}")
+    print(f"  MRR:            {task1_metrics['mrr']:.4f}")
+
+    results_dir = output_dir / "eval_results"
+    results_dir.mkdir(exist_ok=True)
+
+    baseline_metrics = {"task1_nextstep_baseline": task1_metrics}
+    with open(results_dir / "baseline_metrics.json", "w") as f:
+        json.dump(baseline_metrics, f, indent=2, default=str)
+
+    print(f"\nBaseline results saved to {results_dir}/baseline_metrics.json")
+    return baseline_metrics
+
+
 def run_self_eval(output_dir: Path, model_size: str = "small", device: str = "cpu"):
     """Run evaluation using self-generated held-out data."""
     print("=== Self-Evaluation ===\n")
 
-    # Load model
+    # Run baseline first
+    baseline_metrics = run_baseline_eval(output_dir, model_size, device)
+
+    # Load trained model
+    print("\n=== Trained Model Evaluation ===\n")
     print("Loading models...")
     predictor = ProcessPredictor.load(output_dir, model_size=model_size, device=device)
 

@@ -33,7 +33,7 @@ export OUTPUT_DIR="$SCRATCH/process_seq_overnight"
 mkdir -p "$OUTPUT_DIR"
 
 $RUN python3 src/generate_data.py \
-    --extra-data 100000 \
+    --extra-data 20000 \
     --output-dir "$OUTPUT_DIR" \
     --seed 42
 

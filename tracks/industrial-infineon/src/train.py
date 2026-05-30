@@ -197,7 +197,7 @@ def main():
 
     # ── Step 2: Train Random Forest ──
     print("\n=== Step 2: Training Random Forest ===")
-    rf = StepCandidateForest(n_estimators=100, max_depth=20, top_k=15)
+    rf = StepCandidateForest(n_estimators=50, max_depth=15, top_k=15)
     rf_metrics = rf.train(all_pairs, tokenizer)
     rf.save(OUTPUT_DIR / "random_forest.pkl")
 
