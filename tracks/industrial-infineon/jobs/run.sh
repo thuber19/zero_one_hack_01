@@ -116,6 +116,9 @@ echo "=== inference + self-eval (mirrors) ==="
 \$RUN python -m procseq.infer_hybrid --config "${CFG}"
 \$RUN python -m procseq.infer_anomaly_hybrid --config "${CFG}"
 \$RUN python -m procseq.run_eval --config "${CFG}"
+# Authoritative scores: the OFFICIAL data/eval_metrics.py on pure vs hybrid (the decision).
+echo "=== OFFICIAL scorer — pure vs physics-hybrid ==="
+\$RUN python -m procseq.score_official --config "${CFG}"
 
 # 4) REAL submissions from the organizer-format eval files
 echo "=== real submissions ==="
