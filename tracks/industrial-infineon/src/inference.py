@@ -20,6 +20,7 @@ try:                       # LSTM model added on main; optional
 except Exception:          # pragma: no cover
     create_lstm_model = None
 from random_forest import StepCandidateForest
+from block_classifier import get_valid_next_steps_by_block
 
 # ── Physics integration (the merged symbolic harness) ──────────────────────
 # Make the harness importable: it lives one level up from src/.
@@ -166,6 +167,23 @@ class ProcessPredictor:
         # Get transformer probabilities
         probs = self.model.get_next_step_probs(input_ids, attn_mask)
 
+        # Block-based filtering (from main): only allow steps from the current or
+        # next process block.
+        if steps:
+            valid_block_steps = get_valid_next_steps_by_block(steps)
+            block_mask = torch.zeros(self.tokenizer.vocab_size, device=self.device)
+            for step_name in valid_block_steps:
+                tid = self.tokenizer.encode_step(step_name)
+                if 0 <= tid < self.tokenizer.vocab_size:
+                    block_mask[tid] = 1.0
+            block_mask[EOS_ID] = 1.0
+            probs = probs * block_mask
+            s = probs.sum()
+            if s > 0:
+                probs = probs / s
+
+        # RF candidate filtering (guarded so it is safe without a fitted RF and on
+        # the 4th family — get_candidate_mask returns all-ones for unknown families).
         if use_rf_mask and self.rf.is_fitted and steps:
             # Get RF candidate mask
             litho_level = self._get_litho_level(steps)

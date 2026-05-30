@@ -99,6 +99,8 @@ class StepCandidateForest:
         if not self.is_fitted or self.tokenizer is None:
             raise RuntimeError("Forest not trained yet. Call train() first.")
 
+        from block_classifier import classify_step_block_id
+
         family_id_map = {"mosfet": 0, "igbt": 1, "ic": 2}
         # ASSUMPTION: family ∈ {mosfet,igbt,ic}. The hidden 4th family is unseen,
         # so use a sentinel (-1) rather than crashing (see ASSUMPTIONS.md A3).
@@ -106,8 +108,10 @@ class StepCandidateForest:
         curr_id = self.tokenizer.encode_step(current_step)
         prev1 = self.tokenizer.encode_step(prev_steps[-1]) if len(prev_steps) >= 1 else 0
         prev2 = self.tokenizer.encode_step(prev_steps[-2]) if len(prev_steps) >= 2 else 0
+        prev3 = self.tokenizer.encode_step(prev_steps[-3]) if len(prev_steps) >= 3 else 0
+        block_id = classify_step_block_id(current_step)
 
-        features = np.array([[fam_id, curr_id, prev1, prev2, litho_level, position_frac]])
+        features = np.array([[fam_id, curr_id, prev1, prev2, prev3, litho_level, position_frac, block_id]])
         proba = self.clf.predict_proba(features)[0]
 
         # Get top-K

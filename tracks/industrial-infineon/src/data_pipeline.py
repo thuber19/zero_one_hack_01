@@ -21,6 +21,7 @@ for _p in (str(_SRC_DIR), str(DATA_DIR)):
 
 from generate_sequences import generate_dataset, read_csv_sequences  # noqa: E402
 from tokenizer import StepTokenizer, FAMILY_TOKENS, BOS_ID, EOS_ID, PAD_ID  # noqa: E402
+from block_classifier import classify_step_block_id  # noqa: E402
 
 
 # ── Loading ──────────────────────────────────────────────────────────────
@@ -141,8 +142,10 @@ def extract_rf_features(
                     litho_level = int(parts[1])
             prev1 = ids[t - 1] if t >= 1 else PAD_ID
             prev2 = ids[t - 2] if t >= 2 else PAD_ID
+            prev3 = ids[t - 3] if t >= 3 else PAD_ID
             position_frac = t / n
-            X_rows.append([fam_id, ids[t], prev1, prev2, litho_level, position_frac])
+            block_id = classify_step_block_id(steps[t])
+            X_rows.append([fam_id, ids[t], prev1, prev2, prev3, litho_level, position_frac, block_id])
             y_rows.append(ids[t + 1])
 
     X = np.array(X_rows, dtype=np.float32)

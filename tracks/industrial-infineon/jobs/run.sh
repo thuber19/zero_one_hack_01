@@ -4,6 +4,126 @@
 # Usage: bash jobs/run.sh
 #
 
+# ---------------------------------------------------------------------------
+# procseq pipeline (Claude's solution under solution/). Selected as options
+# 7/8 in the architecture menu. Self-contained venv (~/procseq-venv), single
+# A100, plain Accelerate. Produces self-eval metrics.json + the real organizer
+# submissions (submission_task*_real.csv) in $SCRATCH/runs/<name>.
+# ---------------------------------------------------------------------------
+submit_procseq() {
+    local WHICH="$1"   # decoder | encoder
+    echo ""
+    echo "=== procseq ${WHICH} (Claude's pipeline) ==="
+    read -p "Model size [tiny/small/base/large] (base): " PSIZE;  PSIZE="${PSIZE:-base}"
+    read -p "Sequences per family [5000]: "               PDATA;  PDATA="${PDATA:-5000}"
+    read -p "Max training steps [4000]: "                 PSTEPS; PSTEPS="${PSTEPS:-4000}"
+    read -p "Batch size [64]: "                           PBATCH; PBATCH="${PBATCH:-64}"
+
+    local PROJECT_DIR="$HOME/process-sequence-model"
+    local SOL="$PROJECT_DIR/solution"
+    local PIXI="$HOME/.pixi/bin/pixi"
+    local OUTNAME="procseq_${WHICH}_${PSIZE}_d${PDATA}_s${PSTEPS}"
+    local OUTDIR="${SCRATCH:-$HOME}/runs/${OUTNAME}"
+    local CFG="${SOL}/configs/_run_${WHICH}.yaml"
+
+    if [ ! -d "$SOL" ]; then
+        echo "ERROR: $SOL not found. Check out the branch with solution/ into $PROJECT_DIR."
+        exit 1
+    fi
+
+    # Create the 'procseq' pixi env ONCE on the LOGIN node (compute nodes have no internet).
+    # Skip if it already exists from a previous run -- nothing to download.
+    if [ -d "$PROJECT_DIR/.pixi/envs/procseq" ]; then
+        echo "procseq pixi environment already present -> skipping install."
+    else
+        echo "Creating the 'procseq' pixi environment (login node, one-time, ~5 min)..."
+        "$PIXI" install --manifest-path "$PROJECT_DIR/pixi.toml" -e procseq || { echo "pixi install failed"; exit 1; }
+    fi
+
+    mkdir -p "$OUTDIR"
+
+    # Write the run config (login node).
+    cat > "$CFG" <<YAML
+run_name: ${OUTNAME}
+seed: 42
+precision: bf16
+artifacts: ${OUTDIR}
+decoder_ckpt: ${OUTDIR}/decoder
+encoder_ckpt: ${OUTDIR}/encoder
+decoder:
+  size: ${PSIZE}
+  max_len: 256
+  data_per_family: ${PDATA}
+  batch_size: ${PBATCH}
+  lr: 0.0006
+  max_steps: ${PSTEPS}
+  eval_every: 500
+  constrained_decode: true
+encoder:
+  size: ${PSIZE}
+  max_len: 256
+  data_per_family: ${PDATA}
+  batch_size: ${PBATCH}
+  lr: 0.0005
+  max_steps: ${PSTEPS}
+  contrastive:
+    enabled: true
+    weight: 0.5
+    temperature: 0.1
+YAML
+
+    echo ""
+    echo "============================================"
+    echo "  procseq ${WHICH} | size=${PSIZE} | ${PDATA}/family | ${PSTEPS} steps | bs=${PBATCH}"
+    echo "  env:    pixi -e procseq"
+    echo "  output: ${OUTDIR}"
+    echo "============================================"
+    read -p "Submit? [Y/n]: " C; C="${C:-Y}"
+    [[ "$C" == "Y" || "$C" == "y" ]] || { echo "Cancelled."; exit 0; }
+
+    sbatch <<EOF
+#!/bin/bash
+#SBATCH --partition=boost_usr_prod
+#SBATCH --account=EUHPC_D30_031
+#SBATCH --reservation=s_tra_ncc
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --gpus-per-task=1
+#SBATCH --mem=64GB
+#SBATCH --cpus-per-task=8
+#SBATCH --time=2:00:00
+#SBATCH --job-name=procseq-${WHICH}
+#SBATCH --output=slurm-${OUTNAME}-%j.out
+#SBATCH --error=slurm-${OUTNAME}-%j.err
+
+set -e
+RUN="${PIXI} run --as-is --manifest-path ${PROJECT_DIR}/pixi.toml -e procseq env PYTHONUNBUFFERED=1 TOKENIZERS_PARALLELISM=false PYTHONPATH=${SOL} PROCSEQ_ARTIFACTS=${OUTDIR}"
+cd "${SOL}"
+echo "node=\$(hostname) gpu=\$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo N/A) start=\$(date)"
+
+\$RUN python -m procseq.build_data --n-per-family ${PDATA} --seed 42
+
+if [ "${WHICH}" = "decoder" ]; then
+  \$RUN accelerate launch --num_processes 1 -m procseq.train_decoder --config "${CFG}"
+  \$RUN python -m procseq.infer --task 1 --config "${CFG}"
+  \$RUN python -m procseq.infer --task 2 --config "${CFG}"
+  \$RUN python -m procseq.run_eval --config "${CFG}"
+  \$RUN python -m procseq.infer --task 1 --real --config "${CFG}"
+  \$RUN python -m procseq.infer --task 2 --real --config "${CFG}"
+else
+  \$RUN accelerate launch --num_processes 1 -m procseq.train_encoder --config "${CFG}"
+  \$RUN python -m procseq.infer --task 3 --config "${CFG}"
+  \$RUN python -m procseq.run_eval --config "${CFG}"
+  \$RUN python -m procseq.infer --task 3 --real --config "${CFG}"
+fi
+
+echo "=== DONE \$(date) ==="
+echo "metrics:           ${OUTDIR}/metrics.json"
+echo "real submissions:  ${OUTDIR}/submission_task*_real.csv"
+EOF
+    echo "Submitted. Watch with:  squeue --me   |   tail -f slurm-${OUTNAME}-*.out"
+}
+
 echo "============================================"
 echo "  Process Sequence Model — Job Launcher"
 echo "============================================"
@@ -17,8 +137,11 @@ echo "  3) transformer-medium"
 echo "  4) lstm-tiny"
 echo "  5) lstm-small"
 echo "  6) lstm-medium"
+echo "  --- Claude's procseq pipeline (own venv, single A100) ---"
+echo "  7) procseq-decoder   (Tasks 1+2: next-step + completion, grammar-constrained)"
+echo "  8) procseq-encoder   (Task 3: anomaly + rule attribution + contrastive)"
 echo ""
-read -p "Choice [1-6]: " ARCH_CHOICE
+read -p "Choice [1-8]: " ARCH_CHOICE
 
 case $ARCH_CHOICE in
     1) ARCH="transformer"; SIZE="tiny" ;;
@@ -27,6 +150,8 @@ case $ARCH_CHOICE in
     4) ARCH="lstm"; SIZE="tiny" ;;
     5) ARCH="lstm"; SIZE="small" ;;
     6) ARCH="lstm"; SIZE="medium" ;;
+    7) submit_procseq decoder; exit 0 ;;
+    8) submit_procseq encoder; exit 0 ;;
     *) echo "Invalid choice"; exit 1 ;;
 esac
 

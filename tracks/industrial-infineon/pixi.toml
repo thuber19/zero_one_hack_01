@@ -17,3 +17,25 @@ torch = "==2.3.1"
 numpy = ">=1.26,<2.1"
 scikit-learn = ">=1.4"
 matplotlib = ">=3.8"
+
+# ---------------------------------------------------------------------------
+# Isolated environment for Claude's procseq pipeline (solution/). Kept separate
+# (no-default-feature) so the team's default env is untouched. Run via:
+#   pixi run -e procseq python -m procseq....   (jobs/run.sh options 7/8 do this)
+# ---------------------------------------------------------------------------
+[feature.procseq.dependencies]
+python = "3.12.*"
+libstdcxx-ng = ">=13"
+
+[feature.procseq.pypi-dependencies]
+torch = ">=2.4"
+transformers = ">=4.44"
+tokenizers = ">=0.19"
+accelerate = ">=0.33"
+numpy = ">=1.26"
+pyyaml = ">=6.0"
+matplotlib = ">=3.8"
+tensorboard = "*"
+
+[environments]
+procseq = { features = ["procseq"], no-default-feature = true }
