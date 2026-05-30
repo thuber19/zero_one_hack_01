@@ -20,14 +20,19 @@ _SOURCE_FILES = [
 ]
 
 def all_steps() -> list[str]:
-    """Sorted union of every distinct STEP string in the provided CSVs."""
+    """Sorted union of every distinct STEP string in the provided CSVs.
+
+    Steps are canonicalized (synonym -> canonical) when canonicalization is
+    enabled, so the vocabulary the model learns is the canonical one.
+    """
+    from procseq.external import canon_step
     steps: set[str] = set()
     for fname in _SOURCE_FILES:
         p = Path(TRAINING_DATA_DIR) / fname
         if not p.exists():
             continue
         for seq in read_csv_sequences(p).values():
-            steps.update(seq)
+            steps.update(canon_step(s) for s in seq)
     return sorted(steps)
 
 def build_vocab() -> dict[str, int]:

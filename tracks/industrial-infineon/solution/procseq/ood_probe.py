@@ -12,7 +12,8 @@ from procseq.data import scale_family
 from procseq import train_decoder, infer, eval_metrics as em
 from procseq.grammar import FAMILIES
 
-def _score_family_top1(model, tok, family, n, seed):
+def _score_family(model, tok, family, n, seed):
+    """Return (lexical top1, category top1) for next-step on a family."""
     seqs = scale_family(family, n, seed)
     preds, gold = {}, {}
     for i, s in enumerate(seqs[:50]):
@@ -22,7 +23,8 @@ def _score_family_top1(model, tok, family, n, seed):
         eid = f"{family}_{i}"
         preds[eid] = infer.predict_next_step(model, tok, s[:cut], family, k=5)
         gold[eid] = s[cut]
-    return em.score_nextstep(preds, gold)["top1"]
+    r = em.score_nextstep(preds, gold)
+    return r["top1"], r["top1_category"]
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
@@ -54,11 +56,14 @@ def main(argv=None):
     tok = build_tokenizer(DEFAULT_DIR)
     model = LlamaForCausalLM.from_pretrained(str(ckpt))
     id_fams = [f for f in FAMILIES if f != a.holdout]
-    id_top1 = sum(_score_family_top1(model, tok, f, a.data_per_family, a.seed)
-                  for f in id_fams) / len(id_fams)
-    ood_top1 = _score_family_top1(model, tok, a.holdout, a.data_per_family, a.seed)
-    rec = {"holdout": a.holdout, "id_top1": id_top1, "ood_top1": ood_top1,
-           "delta": id_top1 - ood_top1}
+    id_scores = [_score_family(model, tok, f, a.data_per_family, a.seed) for f in id_fams]
+    id_top1 = sum(s[0] for s in id_scores) / len(id_scores)
+    id_cat = sum(s[1] for s in id_scores) / len(id_scores)
+    ood_top1, ood_cat = _score_family(model, tok, a.holdout, a.data_per_family, a.seed)
+    rec = {"holdout": a.holdout,
+           "id_top1": id_top1, "ood_top1": ood_top1, "delta": id_top1 - ood_top1,
+           "id_top1_category": id_cat, "ood_top1_category": ood_cat,
+           "delta_category": id_cat - ood_cat}
     (out / f"ood_{a.holdout}.json").write_text(json.dumps(rec, indent=2))
     print(json.dumps(rec, indent=2))
 

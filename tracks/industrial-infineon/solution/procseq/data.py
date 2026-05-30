@@ -9,7 +9,9 @@ _VARIANT_FILE = {"MOSFET": "MOSFET_variants.csv",
                  "IGBT": "IGBT_variants.csv", "IC": "IC_variants.csv"}
 
 def load_provided(family: str) -> dict[str, list[str]]:
-    return read_csv_sequences(Path(TRAINING_DATA_DIR) / _VARIANT_FILE[family])
+    from procseq.external import canon_sequence
+    raw = read_csv_sequences(Path(TRAINING_DATA_DIR) / _VARIANT_FILE[family])
+    return {sid: canon_sequence(steps) for sid, steps in raw.items()}
 
 def _seq_key(steps: list[str]) -> str:
     return "|".join(steps)
@@ -25,7 +27,9 @@ def scale_family(family: str, n: int, seed: int,
             if k not in seen:
                 seen.add(k); out.append(s)
     if n > 0:
+        from procseq.external import canon_sequence
         for s in generate_dataset(family.lower(), n, seed=seed, validate=True):
+            s = canon_sequence(s)
             k = _seq_key(s)
             if k not in seen:
                 seen.add(k); out.append(s)

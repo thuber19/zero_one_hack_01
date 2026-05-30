@@ -5,11 +5,30 @@ import json
 from pathlib import Path
 import numpy as np
 
+
+def _cat(step: str) -> str:
+    """Functional category of a step (lazy import; identity-ish fallback)."""
+    try:
+        from procseq.external import category_of
+        return category_of(step)
+    except Exception:
+        return step.split()[0] if step else ""
+
+
 # ---------- Task 1: next-step ----------
 def score_nextstep(preds: dict[str, list[str]], gold: dict[str, str]) -> dict:
+    """Lexical Top-k/MRR plus category-level Top-1/MRR.
+
+    Category metrics ask "did the model predict the right *kind* of step"
+    (CLEAN/DEPOSIT/ETCH/...). They degrade far more gracefully than lexical
+    accuracy under synonym/OOD shift, so they are the clearest signal that the
+    model learned process logic rather than surface tokens.
+    """
     ids = [i for i in gold if i in preds]
     top1 = top3 = top5 = 0.0
     mrr = 0.0
+    cat_top1 = 0.0
+    cat_mrr = 0.0
     for i in ids:
         ranked = preds[i]
         g = gold[i]
@@ -18,8 +37,16 @@ def score_nextstep(preds: dict[str, list[str]], gold: dict[str, str]) -> dict:
         if rank and rank <= 3: top3 += 1
         if rank and rank <= 5: top5 += 1
         mrr += (1.0 / rank) if rank else 0.0
+        # category-level
+        gcat = _cat(g)
+        rcats = [_cat(s) for s in ranked]
+        if rcats and rcats[0] == gcat:
+            cat_top1 += 1
+        crank = next((k + 1 for k, c in enumerate(rcats) if c == gcat), None)
+        cat_mrr += (1.0 / crank) if crank else 0.0
     n = max(1, len(ids))
-    return {"n": len(ids), "top1": top1/n, "top3": top3/n, "top5": top5/n, "mrr": mrr/n}
+    return {"n": len(ids), "top1": top1/n, "top3": top3/n, "top5": top5/n,
+            "mrr": mrr/n, "top1_category": cat_top1/n, "mrr_category": cat_mrr/n}
 
 # ---------- Task 2: completion ----------
 def _levenshtein(a, b):
@@ -48,16 +75,20 @@ def _block_signature(steps):
 
 def score_completion(preds, gold):
     ids = [i for i in gold if i in preds]
-    em = ned = tok = blk = 0.0
+    em = ned = tok = blk = catok = 0.0
     for i in ids:
         p, g = preds[i], gold[i]
         em += 1.0 if p == g else 0.0
         ned += normalized_edit_distance(p, g)
         L = max(1, len(g))
         tok += sum(1 for k in range(min(len(p), len(g))) if p[k] == g[k]) / L
+        # category-level token accuracy: right kind of step at each position
+        catok += sum(1 for k in range(min(len(p), len(g)))
+                     if _cat(p[k]) == _cat(g[k])) / L
         blk += normalized_edit_distance(_block_signature(p), _block_signature(g))
     n = max(1, len(ids))
     return {"n": len(ids), "exact_match": em/n, "normalized_edit_distance": ned/n,
+            "category_token_accuracy": catok/n,
             "token_accuracy": tok/n, "block_accuracy": blk/n}
 
 # ---------- Task 3: anomaly ----------
