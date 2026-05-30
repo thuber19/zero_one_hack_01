@@ -111,20 +111,6 @@ class ProcessPredictor:
         input_ids, attn_mask = self._encode_partial(steps, family)
         probs = self.model.get_next_step_probs(input_ids, attn_mask)
 
-        # Block-based filtering: only allow steps from current or next block
-        if steps:
-            valid_block_steps = get_valid_next_steps_by_block(steps)
-            block_mask = torch.zeros(self.tokenizer.vocab_size, device=self.device)
-            for step_name in valid_block_steps:
-                tid = self.tokenizer.encode_step(step_name)
-                if 0 <= tid < self.tokenizer.vocab_size:
-                    block_mask[tid] = 1.0
-            block_mask[EOS_ID] = 1.0
-            probs = probs * block_mask
-            s = probs.sum()
-            if s > 0:
-                probs = probs / s
-
         # RF candidate filtering
         if self.use_rf and steps:
             litho_level = self._get_litho_level(steps)

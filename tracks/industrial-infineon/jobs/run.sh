@@ -264,8 +264,31 @@ echo "=== Step 1: Generating data ==="
 \$RUN python3 src/generate_data.py \\
     --extra-data ${DATA} \\
     --output-dir "\$OUTPUT_DIR" \\
-    --eval-split 0.05 \\
+    --eval-split 0.01 \\
     --seed 42
+
+# Step 1b: Run baselines (fast, no GPU needed)
+echo ""
+echo "=== Step 1b: Baselines ==="
+\$RUN python3 src/baseline.py \\
+    --model-dir "\$OUTPUT_DIR" \\
+    --eval-valid "\$OUTPUT_DIR/eval_input_valid.csv" \\
+    --eval-anomaly "\$OUTPUT_DIR/eval_input_anomaly.csv" \\
+    --out-dir "\$OUTPUT_DIR/baselines"
+
+echo ""
+echo "--- Baseline: Random ---"
+\$RUN python3 data/eval_metrics.py \\
+    --task next-step \\
+    --ground-truth "\$OUTPUT_DIR/eval_set_valid.csv" \\
+    --predictions "\$OUTPUT_DIR/baselines/random/nextstep.csv"
+
+echo ""
+echo "--- Baseline: Frequency (bigram) ---"
+\$RUN python3 data/eval_metrics.py \\
+    --task next-step \\
+    --ground-truth "\$OUTPUT_DIR/eval_set_valid.csv" \\
+    --predictions "\$OUTPUT_DIR/baselines/frequency/nextstep.csv"
 
 # Step 2: Train model (+ RF unless disabled)
 echo ""
