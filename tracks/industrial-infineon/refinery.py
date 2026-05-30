@@ -273,6 +273,79 @@ class PhysicsRefinery:
             generated.pop()
         return generated
 
+    # ── Task 2: physics-vetoed BEAM search (better completions than greedy) ──────
+    def beam_decode(
+        self,
+        prefix: list[str],
+        score_fn,                       # steps -> list[(step_name, prob)]
+        beam: int = 5,
+        branch: int = 8,
+        max_steps: int = 160,
+        length_alpha: float = 0.7,
+    ) -> list[str]:
+        """Beam search with the SAME validity guarantee as constrained_decode: every
+        expansion is physics-legal, beams terminate at SHIP LOT, and the returned
+        completion never introduces a violation. Explores `beam` parallel legal
+        paths (each expanded by its top `branch` legal candidates) and keeps the
+        best by LENGTH-NORMALISED log-probability (length_alpha curbs the
+        short-sequence bias) — this lowers edit distance vs greedy on Task 2.
+
+        score_fn(steps) must return ranked (name, prob) pairs. Returns COMPLETION only.
+        """
+        import math
+        start = self.replay(prefix)
+
+        def _legal(st, step):
+            ns, viol = apply_step(copy(st), step)
+            return ns if not viol else None
+
+        live = [([], start, 0.0)]       # (gen_steps, state, sum_logprob)
+        done = []
+        for _ in range(max_steps):
+            if not live:
+                break
+            cands = []
+            for gen, st, lp in live:
+                preds = score_fn(prefix + gen)
+                legal_found = False
+                for name, prob in (preds or [])[:branch]:
+                    ns = _legal(st, name)
+                    if ns is None:
+                        continue
+                    legal_found = True
+                    nlp = lp + math.log(max(float(prob), 1e-9))
+                    ngen = gen + [name]
+                    if name.upper() == _TERMINAL:
+                        done.append((ngen, ns, nlp))
+                    elif not _looks_stuck(ngen):
+                        cands.append((ngen, ns, nlp))
+                if not legal_found:
+                    done.append((gen, st, lp))      # stuck legally -> finalize as-is
+            if not cands:
+                break
+            cands.sort(key=lambda x: x[2] / (len(x[0]) ** length_alpha), reverse=True)
+            live = cands[:beam]
+
+        pool = done + live
+        if not pool:
+            return []
+        pool.sort(key=lambda x: x[2] / (max(len(x[0]), 1) ** length_alpha), reverse=True)
+        gen = list(pool[0][0])
+
+        # legal termination + final validity trim (same guarantee as greedy path)
+        current = list(prefix) + gen
+        st = self.replay(current)
+        if not (current and current[-1].upper() == _TERMINAL):
+            for tail in ("WAFER SORT TEST", _TERMINAL):
+                if tail == "WAFER SORT TEST" and any(s.upper() == tail for s in current):
+                    continue
+                ns, viol = apply_step(copy(st), tail)
+                if not viol:
+                    current.append(tail); gen.append(tail); st = ns
+        while gen and not self.guard(current)[0]:
+            current.pop(); gen.pop()
+        return gen
+
     # ── Task 3 / safety: guard ──────────────────────────────────────────────────
     @staticmethod
     def guard(sequence: list[str]):

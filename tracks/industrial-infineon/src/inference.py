@@ -239,6 +239,7 @@ class ProcessPredictor:
         max_new_steps: int = 80,
         use_rf_mask: bool = True,
         use_physics: bool = True,
+        beam: int = 5,
     ) -> list[str]:
         """
         Autoregressively complete a partial sequence.
@@ -248,18 +249,27 @@ class ProcessPredictor:
         loops, and guarantees clean termination — so the completion is ALWAYS
         physically valid, even on an unseen family.
 
+        beam>1 uses physics-vetoed BEAM search (lower edit distance on Task 2);
+        beam<=1 falls back to the greedy legal-first decoder. Either way the
+        completion is guaranteed valid.
+
         Returns only the NEW steps (after the partial sequence).
         """
         if use_physics:
-            def score_fn(steps_so_far):
+            # (name, prob) pairs for beam scoring; names-only for the greedy path.
+            def score_fn_probs(steps_so_far):
                 preds = self.predict_next_steps(
                     steps_so_far, family, top_k=15,
                     use_rf_mask=use_rf_mask, use_physics=False,
                 )
-                return [n for n, _ in preds
+                return [(n, p) for n, p in preds
                         if not (n.startswith("[") and n.endswith("]"))]
+            if beam and beam > 1:
+                return self.refinery.beam_decode(
+                    partial_steps, score_fn_probs, beam=beam, max_steps=max_new_steps)
             return self.refinery.constrained_decode(
-                partial_steps, score_fn, beam=15, max_steps=max_new_steps)
+                partial_steps, lambda s: [n for n, _ in score_fn_probs(s)],
+                beam=15, max_steps=max_new_steps)
 
         # ── baseline (no physics): plain greedy, for ablation ──
         current_steps = list(partial_steps)
