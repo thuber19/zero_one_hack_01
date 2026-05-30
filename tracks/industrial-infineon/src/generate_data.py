@@ -87,6 +87,8 @@ def main():
     parser.add_argument("--output-dir", type=Path, default=Path("outputs"))
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--eval-split", type=float, default=0.1)
+    parser.add_argument("--ood", type=int, default=0,
+                        help="pseudo-family OOD sequences added to TRAINING (Mina's injection)")
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -100,10 +102,22 @@ def main():
             extra = generate_dataset(family, args.extra_data - existing, seed=args.seed, validate=True)
             all_seqs.setdefault(family, []).extend(extra)
 
-    # ── Tokenizer from ALL data ──
+    # ── Mina's injection: pseudo-family OOD sequences (novelty spectrum), added to
+    #    TRAINING ONLY. Their novel vocabulary enters the tokenizer; the held-out
+    #    eval below stays the 3 known families, so the benchmark remains clean. ──
+    ood_seqs: list = []
+    if getattr(args, "ood", 0) and args.ood > 0:
+        import sys as _sys
+        _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+        import pseudo_family as PF
+        ood_seqs = PF.generate_pseudo_valid(args.ood, rng, structural=True)  # [(tag, steps)]
+        print(f"  + {len(ood_seqs)} pseudo-family OOD sequences (TRAINING only)")
+
+    # ── Tokenizer from ALL data (incl. OOD novel vocab) ──
     all_flat = []
     for seqs in all_seqs.values():
         all_flat.extend(seqs)
+    all_flat.extend(s for _tag, s in ood_seqs)
     tokenizer = StepTokenizer.from_sequences(all_flat)
     tokenizer.save(args.output_dir / "tokenizer.txt")
     print(f"Tokenizer: {tokenizer.vocab_size} tokens")
@@ -119,6 +133,12 @@ def main():
         eval_seqs[family] = shuffled[:n_eval]
         train_seqs[family] = shuffled[n_eval:]
         print(f"  {family.upper()}: {len(train_seqs[family])} train, {len(eval_seqs[family])} eval")
+
+    # OOD pseudo-families go to TRAINING ONLY (label = their novel tag; the
+    # tokenizer has no family token for it -> encodes as [UNK] family, i.e. the
+    # exact Task-4 condition the model must learn to handle).
+    for tag, s in ood_seqs:
+        train_seqs.setdefault(tag.upper(), []).append(s)
 
     # ── train_sequences.csv ──
     with open(args.output_dir / "train_sequences.csv", "w", newline="") as f:

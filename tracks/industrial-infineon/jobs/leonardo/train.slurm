@@ -25,12 +25,12 @@ export TRANSFORMERS_OFFLINE=1            # compute nodes are offline; data is in
 # export HTTP_PROXY="$HTTPS_PROXY" https_proxy="$HTTPS_PROXY" http_proxy="$HTTPS_PROXY"
 
 MODEL_SIZE=medium
-EPOCHS=60
+EPOCHS=100
 
-echo "=== 1) generate held-out dataset (train + disjoint eval + official GT) ==="
-$PIXI python src/generate_data.py --extra-data 5000 --output-dir "$RUN" --seed 1
+echo "=== 1) data: real (held-out split) + Mina's pseudo-family OOD injection (train-only) ==="
+$PIXI python src/generate_data.py --extra-data 5000 --ood 3000 --output-dir "$RUN" --seed 1
 
-echo "=== 2) SFT: aux category head + UNK-dropout (model learns patterns + function) ==="
+echo "=== 2) SFT: aux category head + UNK-dropout (Mina's injections) — model learns patterns + function ==="
 OUTPUT_DIR="$RUN" $PIXI python src/train.py --arch transformer --model-size "$MODEL_SIZE" \
     --epochs "$EPOCHS" --aux-category --unk-dropout 0.15 --device cuda
 
