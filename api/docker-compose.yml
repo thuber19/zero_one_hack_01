@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_PATH=/models/checkpoint_best.pt
+      - THRESHOLD_PATH=/models/threshold.json
+      - SHAP_BACKGROUND_PATH=/models/shap_background.npy
+    volumes:
+      - ${MODEL_DIR:-./models}:/models:ro
+    restart: unless-stopped
