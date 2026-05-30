@@ -23,9 +23,16 @@ def classify_sequence(model, tok, steps, family, rule_ids):
     return is_valid, score, rule
 
 def _load_encoder(ckpt, tok):
-    model = build_encoder("base", tok, n_rules=len(RULE_IDS))  # size from state shape
     sd = torch.load(Path(ckpt) / "pytorch_model.bin", map_location="cpu")
-    # infer size by trying presets until shapes match
+    meta_path = Path(ckpt) / "encoder_meta.json"
+    if meta_path.exists():
+        import json
+        meta = json.loads(meta_path.read_text())
+        m = build_encoder(meta["size"], tok, n_rules=meta.get("n_rules", len(RULE_IDS)),
+                          max_position_embeddings=meta.get("max_len", 256))
+        m.load_state_dict(sd)
+        return m
+    # Fallback for checkpoints without meta: probe presets until shapes match.
     for size in ("tiny", "small", "base"):
         m = build_encoder(size, tok, n_rules=len(RULE_IDS))
         try:

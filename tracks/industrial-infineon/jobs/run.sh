@@ -9,58 +9,26 @@
 # Usage: bash jobs/run.sh
 #
 
-PROJECT_DIR="$HOME/process-sequence-model"
-PIXI="$HOME/.pixi/bin/pixi"
-DATASETS_DIR="${SCRATCH:-$HOME}/datasets"
-RUNS_DIR="${SCRATCH:-$HOME}/runs"
-
-echo "============================================"
-echo "  Process Sequence Model — Job Launcher"
-echo "============================================"
-echo ""
-echo "What do you want to do?"
-echo ""
-echo "  --- Data ---"
-echo "  1) Generate dataset (train + eval split, done once)"
-echo ""
-echo "  --- Train (our pipeline) ---"
-echo "  2) Train LSTM/Transformer"
-echo ""
-echo "  --- Train (procseq pipeline) ---"
-echo "  3) Train procseq decoder (Tasks 1+2)"
-echo "  4) Train procseq encoder (Task 3)"
-echo ""
-echo "  --- Inference & Evaluate ---"
-echo "  5) Run inference (our models: LSTM/Transformer)"
-echo "  6) Run inference (procseq decoder checkpoint)"
-echo "  7) Score submission files (eval_metrics.py on any nextstep/completion/anomaly.csv)"
-echo ""
-read -p "Choice [1-7]: " CHOICE
-
-# =========================================================================
-# 1) Generate dataset
-# =========================================================================
-if [ "$CHOICE" = "1" ]; then
-    read -p "Sequences per family [20000]: " DATA; DATA="${DATA:-20000}"
-    read -p "Eval split fraction [0.05]: " SPLIT; SPLIT="${SPLIT:-0.05}"
-    read -p "Dataset name [default]: " DSNAME; DSNAME="${DSNAME:-default}"
-
-    DS_DIR="$DATASETS_DIR/$DSNAME"
-
+# ---------------------------------------------------------------------------
+# procseq pipeline (Claude's solution under solution/). Selected as options
+# 7/8 in the architecture menu. Self-contained venv (~/procseq-venv), single
+# A100, plain Accelerate. Produces self-eval metrics.json + the real organizer
+# submissions (submission_task*_real.csv) in $SCRATCH/runs/<name>.
+# ---------------------------------------------------------------------------
+submit_procseq() {
     echo ""
-    echo "Will generate to: $DS_DIR"
-    echo "  $DATA sequences/family, $SPLIT eval split"
-    read -p "Continue? [Y/n]: " C; C="${C:-Y}"
-    [[ "$C" == "Y" || "$C" == "y" ]] || exit 0
+    echo "=== procseq FULL pipeline (trains decoder + encoder, all 3 tasks) ==="
+    read -p "Model size [tiny/small/base/large] (base): " PSIZE;  PSIZE="${PSIZE:-base}"
+    read -p "Sequences per family [5000]: "               PDATA;  PDATA="${PDATA:-5000}"
+    read -p "Max training steps per model [4000]: "       PSTEPS; PSTEPS="${PSTEPS:-4000}"
+    read -p "Batch size [64]: "                           PBATCH; PBATCH="${PBATCH:-64}"
 
-    # Data generation is CPU-only, runs on login node (< 10 min)
-    mkdir -p "$DS_DIR"
-    cd "$PROJECT_DIR"
-    "$PIXI" run --manifest-path pixi.toml python3 src/generate_data.py \
-        --extra-data "$DATA" \
-        --output-dir "$DS_DIR" \
-        --eval-split "$SPLIT" \
-        --seed 42
+    local PROJECT_DIR="$HOME/process-sequence-model"
+    local SOL="$PROJECT_DIR/solution"
+    local PIXI="$HOME/.pixi/bin/pixi"
+    local OUTNAME="procseq_full_${PSIZE}_d${PDATA}_s${PSTEPS}"
+    local OUTDIR="${SCRATCH:-$HOME}/runs/${OUTNAME}"
+    local CFG="${SOL}/configs/_run_full.yaml"
 
     echo ""
     echo "Dataset ready at: $DS_DIR"
@@ -235,8 +203,11 @@ encoder:
   max_len: 256
   data_per_family: ${PDATA}
   batch_size: ${PBATCH}
-  lr: 0.0005
+  lr: 0.0002
   max_steps: ${PSTEPS}
+  warmup_frac: 0.1
+  weight_decay: 0.01
+  eval_every: 250
   contrastive:
     enabled: true
     weight: 0.5
@@ -244,8 +215,12 @@ encoder:
 YAML
 
     echo ""
-    echo "  procseq decoder | $PSIZE | ${PDATA}/family | ${PSTEPS} steps"
-    echo "  output: $OUTDIR"
+    echo "============================================"
+    echo "  procseq FULL | size=${PSIZE} | ${PDATA}/family | ${PSTEPS} steps/model | bs=${PBATCH}"
+    echo "  trains decoder (T1+T2) + encoder (T3); infers all 3 tasks (pure + physics hybrid)"
+    echo "  env:    pixi -e procseq"
+    echo "  output: ${OUTDIR}"
+    echo "============================================"
     read -p "Submit? [Y/n]: " C; C="${C:-Y}"
     [[ "$C" == "Y" || "$C" == "y" ]] || exit 0
 
@@ -256,11 +231,11 @@ YAML
 #SBATCH --reservation=s_tra_ncc
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gpus-per-task=1
-#SBATCH --mem=120GB
-#SBATCH --cpus-per-task=8
-#SBATCH --time=3:00:00
-#SBATCH --job-name=procseq-dec
+#SBATCH --gpus-per-task=4
+#SBATCH --mem=256GB
+#SBATCH --cpus-per-task=32
+#SBATCH --time=4:00:00
+#SBATCH --job-name=procseq-full
 #SBATCH --output=slurm-${OUTNAME}-%j.out
 #SBATCH --error=slurm-${OUTNAME}-%j.err
 
@@ -268,21 +243,118 @@ set -e
 export PYTHONUNBUFFERED=1 TOKENIZERS_PARALLELISM=false
 RUN="${PIXI} run --as-is --manifest-path ${PROJECT_DIR}/pixi.toml -e procseq env PYTHONUNBUFFERED=1 TOKENIZERS_PARALLELISM=false PYTHONPATH=${SOL} PROCSEQ_ARTIFACTS=${OUTDIR}"
 cd "${SOL}"
-echo "GPU: \$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo N/A)"
+echo "node=\$(hostname) gpus=\$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | tr '\n' ',' || echo N/A) start=\$(date)"
 
-\$RUN python3 -m procseq.build_data --n-per-family ${PDATA} --seed 42
-\$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_decoder --config "${CFG}"
-\$RUN python3 -m procseq.infer --task 1 --config "${CFG}"
-\$RUN python3 -m procseq.infer --task 2 --config "${CFG}"
-\$RUN python3 -m procseq.run_eval --config "${CFG}"
-\$RUN python3 -m procseq.infer --task 1 --real --config "${CFG}"
-\$RUN python3 -m procseq.infer --task 2 --real --config "${CFG}"
+# ONE call does everything: build data -> train decoder + encoder IN PARALLEL
+# (auto-splits the 4 GPUs, 2 per model) -> infer all 3 tasks (pure + physics
+# hybrids) -> self-eval -> OFFICIAL scores -> real submissions.
+\$RUN python -m procseq.run_all --config "${CFG}" --parallel-train
 
-echo "=== DONE ==="
-echo "Results: ${OUTDIR}/metrics.json"
-echo "Submissions: ${OUTDIR}/submission_task*_real.csv"
+echo "=== DONE \$(date) ==="
+echo "live training logs: ${OUTDIR}/train_decoder.log , ${OUTDIR}/train_encoder.log"
+echo "metrics:            ${OUTDIR}/metrics.json"
+echo "real submissions:   ${OUTDIR}/submission_task*_real.csv (pure) + *_hybrid_real.csv (physics)"
 EOF
-    echo "Submitted. Watch: tail -f slurm-${OUTNAME}-*.out"
+    echo "Submitted. Watch with:  squeue --me   |   tail -f slurm-${OUTNAME}-*.out"
+}
+
+echo "============================================"
+echo "  Process Sequence Model — Job Launcher"
+echo "============================================"
+echo ""
+
+# Architecture
+echo "Select architecture:"
+echo "  1) transformer-tiny"
+echo "  2) transformer-small"
+echo "  3) transformer-medium"
+echo "  4) lstm-tiny"
+echo "  5) lstm-small"
+echo "  6) lstm-medium"
+echo "  --- Claude's procseq pipeline (own pixi env, single A100) ---"
+echo "  7) procseq-full      (trains decoder + encoder; all 3 tasks, pure + physics hybrid)"
+echo ""
+read -p "Choice [1-7]: " ARCH_CHOICE
+
+case $ARCH_CHOICE in
+    1) ARCH="transformer"; SIZE="tiny" ;;
+    2) ARCH="transformer"; SIZE="small" ;;
+    3) ARCH="transformer"; SIZE="medium" ;;
+    4) ARCH="lstm"; SIZE="tiny" ;;
+    5) ARCH="lstm"; SIZE="small" ;;
+    6) ARCH="lstm"; SIZE="medium" ;;
+    7) submit_procseq; exit 0 ;;
+    *) echo "Invalid choice"; exit 1 ;;
+esac
+
+# Data
+echo ""
+read -p "Sequences per family (e.g. 5000, 20000, 50000): " DATA
+
+# Epochs
+echo ""
+read -p "Epochs [100]: " EPOCHS
+EPOCHS="${EPOCHS:-100}"
+
+# Batch size
+echo ""
+read -p "Batch size [512]: " BATCH
+BATCH="${BATCH:-512}"
+
+# Random Forest
+echo ""
+echo "Use Random Forest candidate filtering?"
+echo "  1) Yes (default)"
+echo "  2) No"
+read -p "Choice [1-2]: " RF_CHOICE
+RF_CHOICE="${RF_CHOICE:-1}"
+if [ "$RF_CHOICE" = "2" ]; then
+    RF_FLAG="--no-rf"
+    RF_LABEL="OFF"
+else
+    RF_FLAG=""
+    RF_LABEL="ON"
+fi
+
+# Physics
+echo ""
+echo "Use Physics refinery?"
+echo "  1) No (default)"
+echo "  2) Yes"
+read -p "Choice [1-2]: " PHYS_CHOICE
+PHYS_CHOICE="${PHYS_CHOICE:-1}"
+if [ "$PHYS_CHOICE" = "2" ]; then
+    PHYS_FLAG="--physics"
+    PHYS_LABEL="ON"
+else
+    PHYS_FLAG=""
+    PHYS_LABEL="OFF"
+fi
+
+# Fixed settings
+GPUS=4
+MEM=$((120 * GPUS))
+CPUS=$((8 * GPUS))
+OUTPUT_NAME="${ARCH}_${SIZE}_e${EPOCHS}_d${DATA}_rf${RF_LABEL}_phys${PHYS_LABEL}"
+JOB_NAME="${ARCH}-${SIZE}-e${EPOCHS}"
+
+echo ""
+echo "============================================"
+echo "  Submitting:"
+echo "    Arch:     $ARCH $SIZE"
+echo "    Epochs:   $EPOCHS (early stopping patience=20)"
+echo "    Data:     ${DATA}/family ($(( DATA * 3 )) total)"
+echo "    Batch:    $BATCH"
+echo "    RF:       $RF_LABEL"
+echo "    Physics:  $PHYS_LABEL"
+echo "    GPUs:     $GPUS (${MEM}GB RAM, ${CPUS} CPUs)"
+echo "    Output:   \$SCRATCH/runs/$OUTPUT_NAME"
+echo "============================================"
+echo ""
+read -p "Submit? [Y/n]: " CONFIRM
+CONFIRM="${CONFIRM:-Y}"
+if [[ "$CONFIRM" != "Y" && "$CONFIRM" != "y" ]]; then
+    echo "Cancelled."
     exit 0
 fi
 
