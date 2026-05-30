@@ -1,0 +1,21 @@
+run_name: smoke
+seed: 42
+device: auto            # auto -> cuda if available else cpu/mps
+precision: fp32         # smoke runs fp32 for CPU/MPS portability
+decoder:
+  size: tiny
+  max_len: 256
+  data_per_family: 20
+  batch_size: 4
+  lr: 0.003
+  max_steps: 5
+  eval_every: 5
+encoder:
+  size: tiny
+  max_len: 256
+  batch_size: 4
+  lr: 0.003
+  max_steps: 5
+artifacts: artifacts
+decoder_ckpt: artifacts/decoder
+encoder_ckpt: artifacts/encoder

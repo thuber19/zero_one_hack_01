@@ -1,0 +1,21 @@
+run_name: leo_decoder_base
+seed: 42
+precision: bf16
+decoder:
+  size: base
+  max_len: 256
+  data_per_family: 5000
+  batch_size: 64
+  lr: 0.0006
+  max_steps: 4000
+  eval_every: 250
+artifacts: artifacts
+decoder_ckpt: artifacts/decoder_base
+encoder_ckpt: artifacts/encoder_base
+encoder:
+  size: base
+  max_len: 256
+  data_per_family: 5000
+  batch_size: 64
+  lr: 0.0005
+  max_steps: 3000
