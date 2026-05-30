@@ -1,8 +1,9 @@
 """
-Training script: trains both the random forest and transformer.
+Training script: trains random forest + sequence model (transformer or LSTM).
 
 Usage:
-    python train.py --model-size small --epochs 50 --batch-size 64
+    python train.py --arch transformer --model-size small --epochs 50 --batch-size 64
+    python train.py --arch lstm --model-size small --epochs 50 --batch-size 64
 """
 
 import argparse
@@ -16,7 +17,8 @@ from torch.utils.data import DataLoader, random_split
 
 from data_pipeline import ProcessSequenceDataset
 from tokenizer import StepTokenizer
-from transformer_model import create_model, ProcessTransformer
+from transformer_model import create_model as create_transformer
+from lstm_model import create_lstm_model
 from random_forest import StepCandidateForest
 
 
@@ -51,7 +53,7 @@ def load_pregenerated_data(output_dir: Path) -> tuple[dict[str, list[list[str]]]
 
 
 def train_transformer(
-    model: ProcessTransformer,
+    model: torch.nn.Module,
     train_loader: DataLoader,
     val_loader: DataLoader,
     epochs: int = 50,
@@ -162,6 +164,8 @@ def train_transformer(
 
 def main():
     parser = argparse.ArgumentParser(description="Train process sequence models")
+    parser.add_argument("--arch", choices=["transformer", "lstm"], default="transformer",
+                        help="Model architecture")
     parser.add_argument("--model-size", choices=["tiny", "small", "medium"], default="small")
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--batch-size", type=int, default=64)
@@ -230,9 +234,12 @@ def main():
         val_ds, batch_size=args.batch_size, shuffle=False, num_workers=0
     )
 
-    model = create_model(tokenizer.vocab_size, size=args.model_size)
+    if args.arch == "transformer":
+        model = create_transformer(tokenizer.vocab_size, size=args.model_size)
+    else:
+        model = create_lstm_model(tokenizer.vocab_size, size=args.model_size)
     n_params = sum(p.numel() for p in model.parameters())
-    print(f"Model: {args.model_size} ({n_params:,} parameters)")
+    print(f"Model: {args.arch} {args.model_size} ({n_params:,} parameters)")
 
     history = train_transformer(
         model, train_loader, val_loader,
@@ -244,6 +251,7 @@ def main():
     with open(OUTPUT_DIR / "training_history.json", "w") as f:
         json.dump({
             "config": {
+                "arch": args.arch,
                 "model_size": args.model_size,
                 "n_params": n_params,
                 "vocab_size": tokenizer.vocab_size,

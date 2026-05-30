@@ -39,10 +39,25 @@ class ProcessPredictor:
         self.device = device
 
     @classmethod
-    def load(cls, output_dir: Path, model_size: str = "small", device: str = "cpu"):
+    def load(cls, output_dir: Path, model_size: str = "small", arch: str = "transformer", device: str = "cpu"):
         """Load all components from saved outputs."""
         tokenizer = StepTokenizer.load(output_dir / "tokenizer.txt")
-        model = create_model(tokenizer.vocab_size, size=model_size)
+
+        # Auto-detect arch from training_history if available
+        history_path = output_dir / "training_history.json"
+        if arch == "transformer" and history_path.exists():
+            import json
+            with open(history_path) as f:
+                config = json.load(f).get("config", {})
+            arch = config.get("arch", "transformer")
+            model_size = config.get("model_size", model_size)
+
+        if arch == "lstm":
+            from lstm_model import create_lstm_model
+            model = create_lstm_model(tokenizer.vocab_size, size=model_size)
+        else:
+            model = create_model(tokenizer.vocab_size, size=model_size)
+
         model.load_state_dict(torch.load(output_dir / "best_transformer.pt", map_location=device, weights_only=True))
         rf = StepCandidateForest()
         rf.load(output_dir / "random_forest.pkl", tokenizer)
