@@ -55,7 +55,8 @@ def main(argv=None):
     ds = ClsDataset(train_items, tok, RULE_IDS, max_len)
     dl = DataLoader(ds, batch_size=ec.get("batch_size", 4), shuffle=True,
                     collate_fn=partial(cls_collate, pad_id=tok.pad_token_id))
-    opt = torch.optim.AdamW(model.parameters(), lr=ec.get("lr", 3e-3))
+    opt = torch.optim.AdamW(model.parameters(), lr=ec.get("lr", 3e-3),
+                            weight_decay=ec.get("weight_decay", 0.01))
     bce = nn.BCEWithLogitsLoss()
     con = ec.get("contrastive", {}) or {}
     con_on = bool(con.get("enabled", False))
@@ -63,6 +64,11 @@ def main(argv=None):
     con_temp = float(con.get("temperature", 0.1))
 
     max_steps = ec.get("max_steps", 5)
+    # Warmup + cosine: a from-scratch DeBERTa needs warmup or it collapses to
+    # predicting one class (the "stuck at 0.5" symptom). Warm up ~10% of steps.
+    from transformers import get_cosine_schedule_with_warmup
+    warmup = max(1, int(ec.get("warmup_frac", 0.1) * max_steps))
+    sched = get_cosine_schedule_with_warmup(opt, warmup, max_steps)
     log_every = ec.get("log_every", 25)
     eval_every = ec.get("eval_every", 250)
     n_params = sum(p.numel() for p in model.parameters())
@@ -96,7 +102,7 @@ def main(argv=None):
                 loss = loss + con_w * closs
                 logs["train/contrastive"] = float(closs.detach())
                 rl_con += float(closs.detach())
-            acc.backward(loss); opt.step(); opt.zero_grad()
+            acc.backward(loss); opt.step(); sched.step(); opt.zero_grad()
             acc.log(logs, step=step); step += 1
 
             if acc.is_main_process and step % log_every == 0:

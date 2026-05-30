@@ -11,20 +11,19 @@
 # submissions (submission_task*_real.csv) in $SCRATCH/runs/<name>.
 # ---------------------------------------------------------------------------
 submit_procseq() {
-    local WHICH="$1"   # decoder | encoder
     echo ""
-    echo "=== procseq ${WHICH} (Claude's pipeline) ==="
+    echo "=== procseq FULL pipeline (trains decoder + encoder, all 3 tasks) ==="
     read -p "Model size [tiny/small/base/large] (base): " PSIZE;  PSIZE="${PSIZE:-base}"
     read -p "Sequences per family [5000]: "               PDATA;  PDATA="${PDATA:-5000}"
-    read -p "Max training steps [4000]: "                 PSTEPS; PSTEPS="${PSTEPS:-4000}"
+    read -p "Max training steps per model [4000]: "       PSTEPS; PSTEPS="${PSTEPS:-4000}"
     read -p "Batch size [64]: "                           PBATCH; PBATCH="${PBATCH:-64}"
 
     local PROJECT_DIR="$HOME/process-sequence-model"
     local SOL="$PROJECT_DIR/solution"
     local PIXI="$HOME/.pixi/bin/pixi"
-    local OUTNAME="procseq_${WHICH}_${PSIZE}_d${PDATA}_s${PSTEPS}"
+    local OUTNAME="procseq_full_${PSIZE}_d${PDATA}_s${PSTEPS}"
     local OUTDIR="${SCRATCH:-$HOME}/runs/${OUTNAME}"
-    local CFG="${SOL}/configs/_run_${WHICH}.yaml"
+    local CFG="${SOL}/configs/_run_full.yaml"
 
     if [ ! -d "$SOL" ]; then
         echo "ERROR: $SOL not found. Check out the branch with solution/ into $PROJECT_DIR."
@@ -61,8 +60,11 @@ encoder:
   max_len: 256
   data_per_family: ${PDATA}
   batch_size: ${PBATCH}
-  lr: 0.0005
+  lr: 0.0002
   max_steps: ${PSTEPS}
+  warmup_frac: 0.1
+  weight_decay: 0.01
+  eval_every: 250
   contrastive:
     enabled: true
     weight: 0.5
@@ -71,7 +73,8 @@ YAML
 
     echo ""
     echo "============================================"
-    echo "  procseq ${WHICH} | size=${PSIZE} | ${PDATA}/family | ${PSTEPS} steps | bs=${PBATCH}"
+    echo "  procseq FULL | size=${PSIZE} | ${PDATA}/family | ${PSTEPS} steps/model | bs=${PBATCH}"
+    echo "  trains decoder (T1+T2) + encoder (T3); infers all 3 tasks (pure + physics hybrid)"
     echo "  env:    pixi -e procseq"
     echo "  output: ${OUTDIR}"
     echo "============================================"
@@ -88,8 +91,8 @@ YAML
 #SBATCH --gpus-per-task=1
 #SBATCH --mem=64GB
 #SBATCH --cpus-per-task=8
-#SBATCH --time=2:00:00
-#SBATCH --job-name=procseq-${WHICH}
+#SBATCH --time=4:00:00
+#SBATCH --job-name=procseq-full
 #SBATCH --output=slurm-${OUTNAME}-%j.out
 #SBATCH --error=slurm-${OUTNAME}-%j.err
 
@@ -98,29 +101,31 @@ RUN="${PIXI} run --as-is --manifest-path ${PROJECT_DIR}/pixi.toml -e procseq env
 cd "${SOL}"
 echo "node=\$(hostname) gpu=\$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo N/A) start=\$(date)"
 
+# 1) shared data + tokenizer
 \$RUN python -m procseq.build_data --n-per-family ${PDATA} --seed 42
 
-if [ "${WHICH}" = "decoder" ]; then
-  \$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_decoder --config "${CFG}"
-  \$RUN python -m procseq.infer --task 1 --config "${CFG}"
-  \$RUN python -m procseq.infer --task 2 --config "${CFG}"
-  \$RUN python -m procseq.run_eval --config "${CFG}"
-  \$RUN python -m procseq.infer --task 1 --real --config "${CFG}"
-  \$RUN python -m procseq.infer --task 2 --real --config "${CFG}"
-  # Hybrid: learned decoder proposes, physics refinery disposes -> guaranteed-valid
-  # completions + legal-first rerank (submission_task{1,2}_hybrid{,_real}.csv).
-  \$RUN python -m procseq.infer_hybrid --config "${CFG}"
-  \$RUN python -m procseq.infer_hybrid --real --config "${CFG}"
-else
-  \$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_encoder --config "${CFG}"
-  \$RUN python -m procseq.infer --task 3 --config "${CFG}"
-  \$RUN python -m procseq.run_eval --config "${CFG}"
-  \$RUN python -m procseq.infer --task 3 --real --config "${CFG}"
-fi
+# 2) train BOTH models (sequential on the one A100)
+echo "=== train decoder (Tasks 1+2) ==="
+\$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_decoder --config "${CFG}"
+echo "=== train encoder (Task 3) ==="
+\$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_encoder --config "${CFG}"
+
+# 3) inference + self-score on our labelled mirrors (all 3 tasks, pure + physics hybrid)
+echo "=== inference + self-eval (mirrors) ==="
+\$RUN python -m procseq.infer --all --config "${CFG}"
+\$RUN python -m procseq.infer_hybrid --config "${CFG}"
+\$RUN python -m procseq.infer_anomaly_hybrid --config "${CFG}"
+\$RUN python -m procseq.run_eval --config "${CFG}"
+
+# 4) REAL submissions from the organizer-format eval files
+echo "=== real submissions ==="
+\$RUN python -m procseq.infer --all --real --config "${CFG}"
+\$RUN python -m procseq.infer_hybrid --real --config "${CFG}"
+\$RUN python -m procseq.infer_anomaly_hybrid --real --config "${CFG}"
 
 echo "=== DONE \$(date) ==="
-echo "metrics:           ${OUTDIR}/metrics.json"
-echo "real submissions:  ${OUTDIR}/submission_task*_real.csv"
+echo "metrics:          ${OUTDIR}/metrics.json"
+echo "real submissions: ${OUTDIR}/submission_task*_real.csv (pure) + *_hybrid_real.csv (physics)"
 EOF
     echo "Submitted. Watch with:  squeue --me   |   tail -f slurm-${OUTNAME}-*.out"
 }
@@ -138,11 +143,10 @@ echo "  3) transformer-medium"
 echo "  4) lstm-tiny"
 echo "  5) lstm-small"
 echo "  6) lstm-medium"
-echo "  --- Claude's procseq pipeline (own venv, single A100) ---"
-echo "  7) procseq-decoder   (Tasks 1+2: next-step + completion, grammar-constrained)"
-echo "  8) procseq-encoder   (Task 3: anomaly + rule attribution + contrastive)"
+echo "  --- Claude's procseq pipeline (own pixi env, single A100) ---"
+echo "  7) procseq-full      (trains decoder + encoder; all 3 tasks, pure + physics hybrid)"
 echo ""
-read -p "Choice [1-8]: " ARCH_CHOICE
+read -p "Choice [1-7]: " ARCH_CHOICE
 
 case $ARCH_CHOICE in
     1) ARCH="transformer"; SIZE="tiny" ;;
@@ -151,8 +155,7 @@ case $ARCH_CHOICE in
     4) ARCH="lstm"; SIZE="tiny" ;;
     5) ARCH="lstm"; SIZE="small" ;;
     6) ARCH="lstm"; SIZE="medium" ;;
-    7) submit_procseq decoder; exit 0 ;;
-    8) submit_procseq encoder; exit 0 ;;
+    7) submit_procseq; exit 0 ;;
     *) echo "Invalid choice"; exit 1 ;;
 esac
 

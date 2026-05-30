@@ -17,8 +17,11 @@ encoder:
   max_len: 256
   data_per_family: 5000
   batch_size: 64
-  lr: 0.0005
-  max_steps: 3000
+  lr: 0.0002
+  max_steps: 4000
+  warmup_frac: 0.1
+  weight_decay: 0.01
+  eval_every: 250
   contrastive:
     enabled: true
     weight: 0.5
