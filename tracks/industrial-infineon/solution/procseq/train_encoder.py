@@ -13,6 +13,7 @@ from procseq.models.encoder import build_encoder
 from procseq.datasets import ClsDataset, cls_collate
 from procseq.anomaly_data import build_anomaly_training
 from procseq.grammar import RULE_IDS
+from procseq.contrastive import supcon_loss
 
 def main(argv=None):
     ap = argparse.ArgumentParser(); ap.add_argument("--config", required=True)
@@ -29,6 +30,12 @@ def main(argv=None):
                     collate_fn=partial(cls_collate, pad_id=tok.pad_token_id))
     opt = torch.optim.AdamW(model.parameters(), lr=ec.get("lr", 3e-3))
     bce = nn.BCEWithLogitsLoss()
+    # Supervised-contrastive term (optional): pulls valid embeddings together and
+    # pushes rule-violating twins away. Hard negatives come for free from anomaly_inject.
+    con = ec.get("contrastive", {}) or {}
+    con_on = bool(con.get("enabled", False))
+    con_w = float(con.get("weight", 0.5))
+    con_temp = float(con.get("temperature", 0.1))
     model, opt, dl = acc.prepare(model, opt, dl)
     model.train(); step = 0; max_steps = ec.get("max_steps", 5)
     while step < max_steps:
@@ -36,8 +43,13 @@ def main(argv=None):
             out = model(input_ids=b["input_ids"], attention_mask=b["attention_mask"])
             loss = bce(out["invalid_logit"], b["invalid"]) + \
                    bce(out["rule_logits"], b["rules"])
+            logs = {"train/enc_loss": loss.item()}
+            if con_on:
+                closs = supcon_loss(out["embed"], b["invalid"], temperature=con_temp)
+                loss = loss + con_w * closs
+                logs["train/contrastive"] = float(closs.detach())
             acc.backward(loss); opt.step(); opt.zero_grad()
-            acc.log({"train/enc_loss": loss.item()}, step=step); step += 1
+            acc.log(logs, step=step); step += 1
             if step >= max_steps: break
     out_dir = Path(cfg.get("encoder_ckpt","artifacts/encoder")); out_dir.mkdir(parents=True, exist_ok=True)
     acc.wait_for_everyone()

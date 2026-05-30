@@ -13,9 +13,13 @@ decoder:
 encoder:
   size: tiny
   max_len: 256
-  batch_size: 4
+  batch_size: 8
   lr: 0.003
   max_steps: 5
+  contrastive:
+    enabled: true
+    weight: 0.5
+    temperature: 0.1
 artifacts: artifacts
 decoder_ckpt: artifacts/decoder
 encoder_ckpt: artifacts/encoder
