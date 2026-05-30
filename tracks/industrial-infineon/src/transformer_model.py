@@ -144,21 +144,38 @@ class ProcessTransformer(nn.Module):
         attention_mask: torch.Tensor,
         category_ids: torch.Tensor | None = None,
         cat_weight: float = 0.3,
+        synonym_matrix: torch.Tensor | None = None,
     ) -> torch.Tensor:
         """Cross-entropy on the next step, ignoring padding. If category_ids
         (next-step categories, pad=-1) and a category head are present, add a
-        weighted auxiliary category cross-entropy."""
+        weighted auxiliary category cross-entropy. If synonym_matrix (V×V, row i =
+        1 for every synonym of token i incl. i) is given, the step loss becomes the
+        GROUP-MARGINAL CE: -log(sum of prob over the gold's synonym group), so a
+        random synonym pick is not penalised (removes coin-flip entropy; the
+        vocabulary/outputs stay exact — see physics/synonyms.py)."""
         if category_ids is not None and self.cat_head is not None:
             logits, cat_logits = self.forward(input_ids, attention_mask, return_cat=True)
-            step_loss = F.cross_entropy(
-                logits.reshape(-1, self.vocab_size), target_ids.reshape(-1), ignore_index=0)
+            step_loss = self._step_loss(logits, target_ids, synonym_matrix)
             cat_loss = F.cross_entropy(
                 cat_logits.reshape(-1, self.n_categories), category_ids.reshape(-1),
                 ignore_index=-1)
             return step_loss + cat_weight * cat_loss
         logits = self.forward(input_ids, attention_mask)
-        return F.cross_entropy(
-            logits.reshape(-1, self.vocab_size), target_ids.reshape(-1), ignore_index=0)
+        return self._step_loss(logits, target_ids, synonym_matrix)
+
+    def _step_loss(self, logits, target_ids, synonym_matrix=None):
+        V = self.vocab_size
+        lf = logits.reshape(-1, V)
+        tf = target_ids.reshape(-1)
+        if synonym_matrix is None:
+            return F.cross_entropy(lf, tf, ignore_index=0)
+        mask = tf != 0                                   # ignore PAD targets
+        if mask.sum() == 0:
+            return lf.sum() * 0.0
+        probs = F.softmax(lf[mask], dim=-1)              # (n, V)
+        grp = synonym_matrix.index_select(0, tf[mask])   # (n, V) synonym membership
+        grp_prob = (probs * grp).sum(dim=-1).clamp_min(1e-9)
+        return -(grp_prob.log()).mean()
 
     @torch.no_grad()
     def get_next_step_probs(

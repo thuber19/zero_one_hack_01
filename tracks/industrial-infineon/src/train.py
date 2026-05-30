@@ -70,6 +70,7 @@ def train_model(
     unk_dropout: float = 0.0,
     id2cat=None,
     cat_weight: float = 0.3,
+    synonym_matrix=None,
 ) -> list[dict]:
     """Train any sequence model and return loss history.
 
@@ -79,6 +80,8 @@ def train_model(
     the model learns step *function*, improving generalisation to the 4th family."""
     if id2cat is not None:
         id2cat = id2cat.to(device)
+    if synonym_matrix is not None:
+        synonym_matrix = synonym_matrix.to(device)
     model = model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=0.01)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
@@ -105,9 +108,11 @@ def train_model(
 
             if id2cat is not None:                      # transformer aux-category head
                 loss = model.compute_loss(input_ids, target_ids, attn_mask,
-                                          category_ids=id2cat[target_ids], cat_weight=cat_weight)
+                                          category_ids=id2cat[target_ids], cat_weight=cat_weight,
+                                          synonym_matrix=synonym_matrix)
             else:
-                loss = model.compute_loss(input_ids, target_ids, attn_mask)
+                loss = model.compute_loss(input_ids, target_ids, attn_mask,
+                                          synonym_matrix=synonym_matrix)
             optimizer.zero_grad()
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
@@ -194,6 +199,9 @@ def main():
     parser.add_argument("--aux-category", action="store_true",
                         help="transformer only: add the next-category auxiliary head (OOD lever)")
     parser.add_argument("--cat-weight", type=float, default=0.3, help="aux category loss weight")
+    parser.add_argument("--synonym-collapse", action="store_true",
+                        help="transformer only: group-marginal loss that credits any synonym of "
+                             "the gold step (removes coin-flip entropy; outputs stay exact)")
     parser.add_argument("--unk-dropout", type=float, default=0.0,
                         help="prob. of [UNK]-masking a context token (OOD lever)")
     parser.add_argument("--init-from", type=str, default=None,
@@ -259,6 +267,24 @@ def main():
     elif args.aux_category:
         print("  [note] --aux-category ignored (only supported for --arch transformer)")
 
+    # Synonym-collapse: build a V×V group-membership matrix so the loss credits any
+    # synonym of the gold step (training-signal cleanup; outputs stay exact).
+    syn_matrix = None
+    if getattr(args, "synonym_collapse", False) and args.arch == "transformer":
+        from physics.synonyms import group_of
+        V = tokenizer.vocab_size
+        syn_matrix = torch.eye(V)
+        for tid in range(V):
+            tok = tokenizer.id2token.get(tid, "")
+            for syn in group_of(tok):
+                sid = tokenizer.token2id.get(syn)
+                if sid is not None:
+                    syn_matrix[tid, sid] = 1.0
+        n_with_syn = int((syn_matrix.sum(1) > 1).sum())
+        print(f"  Synonym-collapse loss ON ({n_with_syn} tokens share a synonym group)")
+    elif getattr(args, "synonym_collapse", False):
+        print("  [note] --synonym-collapse ignored (only supported for --arch transformer)")
+
     if args.arch == "transformer":
         model = create_transformer(tokenizer.vocab_size, size=args.model_size,
                                    n_categories=n_categories)
@@ -280,6 +306,7 @@ def main():
         epochs=args.epochs, lr=args.lr, device=device,
         save_dir=OUTPUT_DIR,
         unk_dropout=args.unk_dropout, id2cat=id2cat_t, cat_weight=args.cat_weight,
+        synonym_matrix=syn_matrix,
     )
 
     # ── Save config ──

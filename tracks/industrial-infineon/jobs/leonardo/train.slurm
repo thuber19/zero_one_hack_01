@@ -36,7 +36,7 @@ $PIXI python src/generate_data.py --extra-data 5000 --ood 3000 --output-dir "$RU
 
 echo "=== 2) SFT: aux category head + UNK-dropout (Mina's injections) — model learns patterns + function ==="
 OUTPUT_DIR="$RUN" $PIXI python -u src/train.py --arch transformer --model-size "$MODEL_SIZE" \
-    --epochs "$EPOCHS" --aux-category --unk-dropout 0.15 $NO_RF --device cuda
+    --epochs "$EPOCHS" --aux-category --unk-dropout 0.15 --synonym-collapse $NO_RF --device cuda
 
 echo "=== 3) GRPO: push the constraints into the weights (verifier reward) ==="
 OUTPUT_DIR="$RUN" $PIXI python src/train_grpo.py --init-from "$RUN/best_model.pt" \
