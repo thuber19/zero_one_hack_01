@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=gpt_fab_full
-#SBATCH --account=tra24_ppgpu
+#SBATCH --account=EUHPC_D30_031
 #SBATCH --partition=boost_usr_prod
 #SBATCH --reservation=strancc
 #SBATCH --qos=boost_usr_prod
