@@ -10,7 +10,7 @@ from torch.utils.data import DataLoader
 from accelerate import Accelerator
 from accelerate.utils import set_seed
 from procseq.config import load_config
-from procseq.tokenizer import build_tokenizer, DEFAULT_DIR
+from procseq.tokenizer import build_tokenizer, load_tokenizer, DEFAULT_DIR
 from procseq.models.encoder import build_encoder
 from procseq.datasets import ClsDataset, cls_collate
 from procseq.anomaly_data import build_anomaly_training
@@ -46,7 +46,7 @@ def main(argv=None):
                       log_with="tensorboard", project_dir=cfg.get("artifacts", "artifacts"))
     acc.init_trackers(cfg.get("run_name", "encoder") + "_enc")
     max_len = ec.get("max_len", 256)
-    tok = build_tokenizer(DEFAULT_DIR)
+    tok = load_tokenizer(DEFAULT_DIR)   # load pre-built tokenizer (no write race under DDP/parallel)
     model = build_encoder(ec["size"], tok, n_rules=len(RULE_IDS), max_position_embeddings=max_len)
     items = build_anomaly_training(ec.get("data_per_family", 20), cfg.get("seed", 42))
     n_val = min(128, len(items) // 5) if len(items) > 16 else 0
@@ -126,8 +126,13 @@ def main(argv=None):
 
     out_dir = Path(cfg.get("encoder_ckpt", "artifacts/encoder")); out_dir.mkdir(parents=True, exist_ok=True)
     acc.wait_for_everyone()
-    acc.save(acc.unwrap_model(model).state_dict(), out_dir / "pytorch_model.bin")
-    tok.save_pretrained(out_dir)
+    if acc.is_main_process:   # only rank 0 writes the checkpoint (DDP-safe)
+        torch.save(acc.unwrap_model(model).state_dict(), out_dir / "pytorch_model.bin")
+        tok.save_pretrained(out_dir)
+        # Persist the architecture so loaders don't have to brute-force the size.
+        import json as _json
+        (out_dir / "encoder_meta.json").write_text(
+            _json.dumps({"size": ec["size"], "n_rules": len(RULE_IDS), "max_len": max_len}))
     acc.end_training()
     if acc.is_main_process:
         print(f"Saved encoder -> {out_dir}  (total {time.time()-t0:.0f}s)", flush=True)

@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, WeightedRandomSampler
 from accelerate import Accelerator
 from accelerate.utils import set_seed
 from procseq.config import load_config
-from procseq.tokenizer import build_tokenizer, DEFAULT_DIR, encode_sequence
+from procseq.tokenizer import build_tokenizer, load_tokenizer, DEFAULT_DIR, encode_sequence
 from procseq.models.decoder import build_decoder
 from procseq.datasets import ClmDataset, clm_collate
 from procseq.data import scale_family, ucbs_weights
@@ -62,7 +62,7 @@ def main(argv=None):
                       log_with="tensorboard", project_dir=cfg.get("artifacts", "artifacts"))
     acc.init_trackers(cfg.get("run_name", "decoder"))
     max_len = dc.get("max_len", 256)
-    tok = build_tokenizer(DEFAULT_DIR)
+    tok = load_tokenizer(DEFAULT_DIR)   # load pre-built tokenizer (no write race under DDP/parallel)
     model = build_decoder(dc["size"], tok, max_len)
     pairs = _load_training_pairs(dc.get("data_per_family", 20), cfg.get("seed", 42))
     val_pairs = pairs[::max(1, len(pairs) // 64)][:64]   # ~64, spread across families
@@ -122,8 +122,9 @@ def main(argv=None):
 
     out_dir = Path(cfg.get("decoder_ckpt", "artifacts/decoder"))
     acc.wait_for_everyone()
-    acc.unwrap_model(model).save_pretrained(out_dir)
-    tok.save_pretrained(out_dir)
+    if acc.is_main_process:   # only rank 0 writes the checkpoint (DDP-safe)
+        acc.unwrap_model(model).save_pretrained(out_dir)
+        tok.save_pretrained(out_dir)
     acc.end_training()
     if acc.is_main_process:
         print(f"Saved decoder -> {out_dir}  (total {time.time()-t0:.0f}s)", flush=True)

@@ -88,9 +88,9 @@ YAML
 #SBATCH --reservation=s_tra_ncc
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --gpus-per-task=1
-#SBATCH --mem=64GB
-#SBATCH --cpus-per-task=8
+#SBATCH --gpus-per-task=4
+#SBATCH --mem=256GB
+#SBATCH --cpus-per-task=32
 #SBATCH --time=4:00:00
 #SBATCH --job-name=procseq-full
 #SBATCH --output=slurm-${OUTNAME}-%j.out
@@ -99,36 +99,17 @@ YAML
 set -e
 RUN="${PIXI} run --as-is --manifest-path ${PROJECT_DIR}/pixi.toml -e procseq env PYTHONUNBUFFERED=1 TOKENIZERS_PARALLELISM=false PYTHONPATH=${SOL} PROCSEQ_ARTIFACTS=${OUTDIR}"
 cd "${SOL}"
-echo "node=\$(hostname) gpu=\$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null || echo N/A) start=\$(date)"
+echo "node=\$(hostname) gpus=\$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | tr '\n' ',' || echo N/A) start=\$(date)"
 
-# 1) shared data + tokenizer
-\$RUN python -m procseq.build_data --n-per-family ${PDATA} --seed 42
-
-# 2) train BOTH models (sequential on the one A100)
-echo "=== train decoder (Tasks 1+2) ==="
-\$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_decoder --config "${CFG}"
-echo "=== train encoder (Task 3) ==="
-\$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_encoder --config "${CFG}"
-
-# 3) inference + self-score on our labelled mirrors (all 3 tasks, pure + physics hybrid)
-echo "=== inference + self-eval (mirrors) ==="
-\$RUN python -m procseq.infer --all --config "${CFG}"
-\$RUN python -m procseq.infer_hybrid --config "${CFG}"
-\$RUN python -m procseq.infer_anomaly_hybrid --config "${CFG}"
-\$RUN python -m procseq.run_eval --config "${CFG}"
-# Authoritative scores: the OFFICIAL data/eval_metrics.py on pure vs hybrid (the decision).
-echo "=== OFFICIAL scorer — pure vs physics-hybrid ==="
-\$RUN python -m procseq.score_official --config "${CFG}"
-
-# 4) REAL submissions from the organizer-format eval files
-echo "=== real submissions ==="
-\$RUN python -m procseq.infer --all --real --config "${CFG}"
-\$RUN python -m procseq.infer_hybrid --real --config "${CFG}"
-\$RUN python -m procseq.infer_anomaly_hybrid --real --config "${CFG}"
+# ONE call does everything: build data -> train decoder + encoder IN PARALLEL
+# (auto-splits the 4 GPUs, 2 per model) -> infer all 3 tasks (pure + physics
+# hybrids) -> self-eval -> OFFICIAL scores -> real submissions.
+\$RUN python -m procseq.run_all --config "${CFG}" --parallel-train
 
 echo "=== DONE \$(date) ==="
-echo "metrics:          ${OUTDIR}/metrics.json"
-echo "real submissions: ${OUTDIR}/submission_task*_real.csv (pure) + *_hybrid_real.csv (physics)"
+echo "live training logs: ${OUTDIR}/train_decoder.log , ${OUTDIR}/train_encoder.log"
+echo "metrics:            ${OUTDIR}/metrics.json"
+echo "real submissions:   ${OUTDIR}/submission_task*_real.csv (pure) + *_hybrid_real.csv (physics)"
 EOF
     echo "Submitted. Watch with:  squeue --me   |   tail -f slurm-${OUTNAME}-*.out"
 }
