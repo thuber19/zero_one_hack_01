@@ -337,6 +337,32 @@ echo "=== Step 4: Self-Evaluation (official scorer) ==="
     --predictions "\$OUTPUT_DIR/self_eval_submissions/anomaly.csv" \\
     --valid-supplement "\$OUTPUT_DIR/eval_set_valid_supplement.csv"
 
+# Step 4b: Comprehensive anomaly stress-test (known-BAD dataset, ALL 10 rules)
+echo ""
+echo "=== Step 4b: Comprehensive anomaly stress-test (every forbidden rule) ==="
+# Build a full-size, foolproof known-bad testset: every one of the 10 forbidden
+# patterns is produced at least once and each label is independently re-verified
+# by the reference checker (make_bad_testset.py also prints coverage + harness).
+\$RUN python3 make_bad_testset.py \\
+    --count ${DATA} \\
+    --seed 42 \\
+    --out-dir "\$OUTPUT_DIR/bad_testset"
+
+# Run the trained model (+ physics if enabled) over the whole bad testset.
+\$RUN python3 src/inference.py \\
+    --model-dir "\$OUTPUT_DIR" \\
+    --eval-anomaly "\$OUTPUT_DIR/bad_testset/eval_input_anomaly.csv" \\
+    --out-dir "\$OUTPUT_DIR/bad_testset_submissions" \\
+    ${RF_FLAG} ${PHYS_FLAG}
+
+# Score with the official metric. The run's valid examples are supplied as
+# negatives so precision / ROC-AUC are meaningful (not detection recall alone).
+\$RUN python3 data/eval_metrics.py \\
+    --task anomaly \\
+    --ground-truth "\$OUTPUT_DIR/bad_testset/eval_set_forbidden.csv" \\
+    --predictions "\$OUTPUT_DIR/bad_testset_submissions/anomaly.csv" \\
+    --valid-supplement "\$OUTPUT_DIR/eval_set_valid_supplement.csv"
+
 # Step 5: Plots
 echo ""
 echo "=== Step 5: Plots ==="

@@ -422,6 +422,7 @@ def generate_task1_submission(
     predictor: ProcessPredictor,
     eval_csv: Path,
     output_csv: Path,
+    use_physics: bool = True,
 ):
     """Generate Task 1 (next-step prediction) submission file."""
     rows = _read_eval(eval_csv, ["EXAMPLE_ID", "FAMILY", "PARTIAL_SEQUENCE"])
@@ -433,7 +434,7 @@ def generate_task1_submission(
         partial = row["PARTIAL_SEQUENCE"].strip().split("|")
         partial = [s.strip() for s in partial if s.strip()]
 
-        preds = predictor.predict_next_steps(partial, family, top_k=5)
+        preds = predictor.predict_next_steps(partial, family, top_k=5, use_physics=use_physics)
         # Pad to 5 if needed
         while len(preds) < 5:
             preds.append(("[UNK]", 0.0))
@@ -458,6 +459,7 @@ def generate_task2_submission(
     predictor: ProcessPredictor,
     eval_csv: Path,
     output_csv: Path,
+    use_physics: bool = True,
 ):
     """Generate Task 2 (sequence completion) submission file."""
     rows = _read_eval(eval_csv, ["EXAMPLE_ID", "FAMILY", "PARTIAL_SEQUENCE"])
@@ -469,7 +471,7 @@ def generate_task2_submission(
         partial = row["PARTIAL_SEQUENCE"].strip().split("|")
         partial = [s.strip() for s in partial if s.strip()]
 
-        completion = predictor.complete_sequence(partial, family)
+        completion = predictor.complete_sequence(partial, family, use_physics=use_physics)
         pred_seq = "|".join(completion)
 
         results.append({
@@ -488,6 +490,7 @@ def generate_task3_submission(
     predictor: ProcessPredictor,
     eval_csv: Path,
     output_csv: Path,
+    use_physics: bool = True,
 ):
     """Generate Task 3 (anomaly detection) submission file."""
     rows = _read_eval(eval_csv, ["EXAMPLE_ID", "FAMILY", "SEQUENCE"])
@@ -499,7 +502,7 @@ def generate_task3_submission(
         sequence = row["SEQUENCE"].strip().split("|")
         sequence = [s.strip() for s in sequence if s.strip()]
 
-        result = predictor.detect_anomaly(sequence, family)
+        result = predictor.detect_anomaly(sequence, family, use_physics=use_physics)
 
         results.append({
             "EXAMPLE_ID": example_id,
@@ -548,11 +551,64 @@ def generate_all_submissions(
 
 if __name__ == "__main__":
     import argparse
+    # Superset CLI: supports BOTH the team pipeline's contract (jobs/run.sh calls
+    # --model-dir/--eval-valid/--eval-anomaly/--out-dir/--no-rf/--physics) AND the
+    # fork's simpler --output-dir/--eval-dir form used in ARCHITECTURE.md/HANDOFF.
+    # --physics is the explicit opt-in for this fork's physics layer (OFF by
+    # default, matching run.sh); --no-rf disables the Random-Forest candidate path.
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output-dir", type=Path, default=Path(__file__).parent.parent / "outputs")
-    parser.add_argument("--eval-dir", type=Path, default=Path(__file__).parent.parent / "data")
+    parser.add_argument("--model-dir", "--output-dir", dest="model_dir", type=Path,
+                        default=Path(__file__).parent.parent / "outputs",
+                        help="Directory with model + tokenizer (+ optional random_forest.pkl)")
+    parser.add_argument("--eval-dir", type=Path, default=None,
+                        help="Dir holding eval_input_valid.csv + eval_input_anomaly.csv (fork form)")
+    parser.add_argument("--eval-valid", type=Path, default=None, help="eval_input_valid.csv (Tasks 1+2)")
+    parser.add_argument("--eval-anomaly", type=Path, default=None, help="eval_input_anomaly.csv (Task 3)")
+    parser.add_argument("--out-dir", "--submissions-dir", dest="out_dir", type=Path, default=None,
+                        help="Output dir for submission CSVs (default: <model-dir>/submissions)")
     parser.add_argument("--model-size", default="small")
-    parser.add_argument("--device", default="cpu")
+    parser.add_argument("--device", default=None, help="cpu|cuda (default: auto-detect)")
+    parser.add_argument("--no-rf", action="store_true", help="disable Random-Forest candidate path")
+    parser.add_argument("--physics", action="store_true", help="enable this fork's physics layer")
     args = parser.parse_args()
 
-    generate_all_submissions(args.output_dir, args.eval_dir, args.model_size, args.device)
+    device = args.device or ("cuda" if torch.cuda.is_available() else "cpu")
+    use_physics = args.physics
+    use_rf = not args.no_rf
+
+    # Resolve eval file paths from either explicit flags or --eval-dir.
+    eval_valid = args.eval_valid
+    eval_anomaly = args.eval_anomaly
+    if args.eval_dir is not None:
+        eval_valid = eval_valid or (args.eval_dir / "eval_input_valid.csv")
+        eval_anomaly = eval_anomaly or (args.eval_dir / "eval_input_anomaly.csv")
+    if eval_valid is None and eval_anomaly is None:
+        # Neither given: fall back to the fork default eval dir (data/).
+        default_eval = Path(__file__).parent.parent / "data"
+        eval_valid = default_eval / "eval_input_valid.csv"
+        eval_anomaly = default_eval / "eval_input_anomaly.csv"
+
+    out_dir = args.out_dir or (args.model_dir / "submissions")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Loading models from {args.model_dir} (device={device}, "
+          f"RF={'on' if use_rf else 'off'}, physics={'on' if use_physics else 'off'})...")
+    predictor = ProcessPredictor.load(args.model_dir, model_size=args.model_size, device=device)
+    if not use_rf:                       # neutralise the RF everywhere it is consulted
+        predictor.rf.is_fitted = False
+
+    if eval_valid and Path(eval_valid).exists():
+        print("\n--- Task 1: Next-step prediction ---")
+        generate_task1_submission(predictor, eval_valid, out_dir / "nextstep.csv", use_physics=use_physics)
+        print("\n--- Task 2: Sequence completion ---")
+        generate_task2_submission(predictor, eval_valid, out_dir / "completion.csv", use_physics=use_physics)
+    elif eval_valid:
+        print(f"  Eval file not found (skipping Tasks 1+2): {eval_valid}")
+
+    if eval_anomaly and Path(eval_anomaly).exists():
+        print("\n--- Task 3: Anomaly detection ---")
+        generate_task3_submission(predictor, eval_anomaly, out_dir / "anomaly.csv", use_physics=use_physics)
+    elif eval_anomaly:
+        print(f"  Eval file not found (skipping Task 3): {eval_anomaly}")
+
+    print(f"\nSubmissions written to: {out_dir}")
