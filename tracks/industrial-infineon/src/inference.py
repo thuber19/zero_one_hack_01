@@ -20,7 +20,8 @@ try:                       # LSTM model added on main; optional
 except Exception:          # pragma: no cover
     create_lstm_model = None
 from random_forest import StepCandidateForest
-from block_classifier import get_valid_next_steps_by_block
+# (main removed the block-based pre-filter in predict_next_steps; the
+# get_valid_next_steps_by_block import is intentionally dropped — it was its only user.)
 
 # ── Physics integration (the merged symbolic harness) ──────────────────────
 # Make the harness importable: it lives one level up from src/.

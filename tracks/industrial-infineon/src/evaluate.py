@@ -34,7 +34,12 @@ from physics.ontology import classify_step as _classify_step
 
 
 def _block_seq(steps):
-    """Collapse a step list to its category ('block') sequence."""
+    """Collapse a step list to its category ('block') sequence.
+
+    NOTE: this is our internal proxy for Block-level Accuracy. The AUTHORITATIVE
+    Block-accuracy is the organizers' `data/eval_metrics.py` (now present) — use
+    it (`--task completion`) for any reported number; this self-eval proxy is for
+    quick local sanity only and may differ from the official definition."""
     out = []
     for s in steps:
         c = _classify_step(s)

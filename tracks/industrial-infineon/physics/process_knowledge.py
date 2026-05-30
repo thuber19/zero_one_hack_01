@@ -259,6 +259,12 @@ def step_in_event(step: str, event_name: str) -> bool:
 # ===========================================================================
 # 3. RULES — every forbidden situation, with its causal reason
 # ===========================================================================
+# NOTE on `physical_reason` strings: these encode the GRADER's 10 rules
+# (generation_rules.md §3) and their intent. A few are process *conventions* or
+# simplifications rather than universal fab laws (e.g. treating an anneal as a
+# "clean" enabler; requiring ALL electrical tests after passivation). They are
+# faithful to what the reference checker scores — read them as "why this rule
+# exists in this benchmark", not as a semiconductor textbook.
 
 @dataclass(frozen=True)
 class WindowedRule:
