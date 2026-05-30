@@ -103,13 +103,20 @@ def completion_reward(prefix_steps, gen_steps):
     return r
 
 
-def load_prefixes(data_dir: Path, n: int, rng):
-    seqs = []
+def _load_pairs(data_dir: Path):
+    """(family, steps) pairs from EITHER convention: train_sequences.csv (unified
+    main pipeline) or sequences.json (our integrated generator)."""
+    csv_path = data_dir / "train_sequences.csv"
+    if csv_path.exists():
+        from data_pipeline import load_train_csv
+        return load_train_csv(csv_path)
     sj = data_dir / "sequences.json"
     fam_seqs = json.loads(sj.read_text())
-    for fam, lst in fam_seqs.items():
-        for s in lst:
-            seqs.append((fam, s))
+    return [(fam, s) for fam, lst in fam_seqs.items() for s in lst]
+
+
+def load_prefixes(data_dir: Path, n: int, rng):
+    seqs = list(_load_pairs(data_dir))
     rng.shuffle(seqs)
     out = []
     for fam, s in seqs[: n * 3]:

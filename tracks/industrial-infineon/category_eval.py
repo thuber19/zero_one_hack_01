@@ -100,11 +100,17 @@ def main():
     # Reproducibility note: model dirs (outputs_M3/) are gitignored, so a clean
     # checkout has no checkpoint. Fail with an actionable message rather than a
     # bare FileNotFoundError.
-    if not (mdir / "best_transformer.pt").exists():
-        print(f"[category_eval] no checkpoint in {mdir}. Train first, e.g.:\n"
-              f"  python src/generate_integrated_data.py --extra-data 1000 --ood 600 --output-dir {mdir}\n"
-              f"  OUTPUT_DIR={mdir} python train_transformer_only.py --model-size tiny --epochs 12 --aux-category",
-              file=sys.stderr)
+    # checkpoint: unified pipeline writes best_model.pt; our older runs wrote
+    # best_transformer.pt — accept either.
+    ckpt = mdir / "best_model.pt"
+    if not ckpt.exists():
+        ckpt = mdir / "best_transformer.pt"
+    if not ckpt.exists():
+        print(f"[category_eval] no checkpoint (best_model.pt / best_transformer.pt) in {mdir}. "
+              f"Train first with --aux-category, e.g.:\n"
+              f"  python src/generate_data.py --extra-data 1000 --output-dir {mdir}\n"
+              f"  OUTPUT_DIR={mdir} python src/train.py --arch transformer --model-size tiny "
+              f"--epochs 12 --aux-category", file=sys.stderr)
         sys.exit(2)
     tokenizer = StepTokenizer.load(mdir / "tokenizer.txt")
     id2cat, ncat = build_id2cat(tokenizer)
@@ -112,7 +118,7 @@ def main():
     print(f"Loaded tokenizer: vocab={tokenizer.vocab_size}, categories={ncat}")
 
     model = create_model(tokenizer.vocab_size, size=args.model_size, n_categories=ncat)
-    sd = torch.load(mdir / "best_transformer.pt", map_location="cpu", weights_only=True)
+    sd = torch.load(ckpt, map_location="cpu", weights_only=True)
     missing, unexpected = model.load_state_dict(sd, strict=False)
     if model.cat_head is None:
         print("ERROR: model has no category head — was it trained with --aux-category?")
@@ -123,8 +129,15 @@ def main():
     model.eval()
     print(f"Loaded model (missing={len(missing)}, unexpected={len(unexpected)})")
 
-    # ── ID: held-out MOSFET / IGBT / IC ──
-    id_seqs = json.load(open(mdir / "sequences.json"))
+    # ── ID: held-out MOSFET / IGBT / IC (from EITHER convention) ──
+    if (mdir / "sequences.json").exists():
+        id_seqs = json.load(open(mdir / "sequences.json"))
+    else:  # unified pipeline: train_sequences.csv (group by family)
+        sys.path.insert(0, str(_ROOT / "src"))
+        from data_pipeline import load_train_csv
+        id_seqs = {}
+        for fam, steps in load_train_csv(mdir / "train_sequences.csv"):
+            id_seqs.setdefault(fam, []).append(steps)
     print("\n=== IN-DISTRIBUTION (MOSFET / IGBT / IC) ===")
     id_cat_c = id_cat_t = id_step_c = id_step_t = 0
     for fam, seqs in id_seqs.items():
