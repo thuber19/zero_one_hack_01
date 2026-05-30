@@ -21,7 +21,7 @@ def plot_training_curves(history_path: Path, save_dir: Path):
     with open(history_path) as f:
         data = json.load(f)
 
-    history = data["transformer_history"]
+    history = data.get("history", data.get("transformer_history", []))
     config = data["config"]
     epochs = [h["epoch"] for h in history]
     train_loss = [h["train_loss"] for h in history]
@@ -121,13 +121,13 @@ def plot_scaling_comparison(scaling_dirs: list[Path], save_dir: Path):
             data = json.load(f)
         size = data["config"]["model_size"]
         n_params = data["config"]["n_params"]
-        best_val_loss = min(h["val_loss"] for h in data["transformer_history"])
-        best_val_acc = max(h["val_accuracy"] for h in data["transformer_history"])
+        best_val_loss = min(h["val_loss"] for h in data.get("history", data.get("transformer_history", [])))
+        best_val_acc = max(h["val_accuracy"] for h in data.get("history", data.get("transformer_history", [])))
         results[size] = {
             "n_params": n_params,
             "best_val_loss": best_val_loss,
             "best_val_acc": best_val_acc,
-            "history": data["transformer_history"],
+            "history": data.get("history", data.get("transformer_history", [])),
         }
 
     if len(results) < 2:

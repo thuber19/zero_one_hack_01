@@ -61,7 +61,7 @@ fi
 
 # Physics
 echo ""
-echo "Use Physics refinery (for eval only)?"
+echo "Use Physics refinery?"
 echo "  1) No (default)"
 echo "  2) Yes"
 read -p "Choice [1-2]: " PHYS_CHOICE
@@ -134,13 +134,17 @@ echo "  Started: \$(date)"
 echo "============================================"
 echo ""
 
-# Step 1: Generate data
+# Step 1: Generate data + eval CSVs
+echo "=== Step 1: Generating data ==="
 \$RUN python3 src/generate_data.py \\
     --extra-data ${DATA} \\
     --output-dir "\$OUTPUT_DIR" \\
+    --eval-split 0.05 \\
     --seed 42
 
 # Step 2: Train model (+ RF unless disabled)
+echo ""
+echo "=== Step 2: Training ==="
 \$RUN python3 src/train.py \\
     --arch ${ARCH} \\
     --model-size ${SIZE} \\
@@ -149,17 +153,53 @@ echo ""
     --lr 3e-4 \\
     --seed 42 ${RF_FLAG}
 
-# Step 3: Evaluate
-\$RUN python3 src/evaluate.py \\
-    --self-eval \\
-    --output-dir "\$OUTPUT_DIR" \\
-    --model-size ${SIZE} ${RF_FLAG} ${PHYS_FLAG}
+# Step 3a: Inference on self-eval data
+echo ""
+echo "=== Step 3a: Inference (self-eval) ==="
+\$RUN python3 src/inference.py \\
+    --model-dir "\$OUTPUT_DIR" \\
+    --eval-valid "\$OUTPUT_DIR/eval_input_valid.csv" \\
+    --eval-anomaly "\$OUTPUT_DIR/eval_input_anomaly.csv" \\
+    --out-dir "\$OUTPUT_DIR/self_eval_submissions" \\
+    ${RF_FLAG} ${PHYS_FLAG}
 
-# Step 4: Plots
+# Step 3b: Inference on official eval data
+echo ""
+echo "=== Step 3b: Inference (official eval) ==="
+\$RUN python3 src/inference.py \\
+    --model-dir "\$OUTPUT_DIR" \\
+    --eval-valid "\$PROJECT_DIR/data/eval_input_valid.csv" \\
+    --eval-anomaly "\$PROJECT_DIR/data/eval_input_anomaly.csv" \\
+    --out-dir "\$OUTPUT_DIR/official_submissions" \\
+    ${RF_FLAG} ${PHYS_FLAG}
+
+# Step 4: Score self-eval using official eval_metrics.py
+echo ""
+echo "=== Step 4: Self-Evaluation (official scorer) ==="
+\$RUN python3 data/eval_metrics.py \\
+    --task next-step \\
+    --ground-truth "\$OUTPUT_DIR/eval_set_valid.csv" \\
+    --predictions "\$OUTPUT_DIR/self_eval_submissions/nextstep.csv"
+
+\$RUN python3 data/eval_metrics.py \\
+    --task completion \\
+    --ground-truth "\$OUTPUT_DIR/eval_set_valid.csv" \\
+    --predictions "\$OUTPUT_DIR/self_eval_submissions/completion.csv"
+
+\$RUN python3 data/eval_metrics.py \\
+    --task anomaly \\
+    --ground-truth "\$OUTPUT_DIR/eval_set_forbidden.csv" \\
+    --predictions "\$OUTPUT_DIR/self_eval_submissions/anomaly.csv" \\
+    --valid-supplement "\$OUTPUT_DIR/eval_set_valid_supplement.csv"
+
+# Step 5: Plots
+echo ""
+echo "=== Step 5: Plots ==="
 \$RUN python3 src/plot_results.py \\
     --output-dir "\$OUTPUT_DIR"
 
 echo ""
 echo "=== DONE — \$(date) ==="
 echo "Results in: \$OUTPUT_DIR"
+echo "Submissions in: \$OUTPUT_DIR/submissions/"
 EOF

@@ -55,7 +55,7 @@ from typing import Callable, Iterable, Optional, Union
 
 _REPO = Path(__file__).parent
 sys.path.insert(0, str(_REPO))
-sys.path.insert(0, str(_REPO / "training_data"))
+sys.path.insert(0, str(_REPO / "data"))
 
 for _stream in (sys.stdout, sys.stderr):
     try:
@@ -320,12 +320,12 @@ if __name__ == "__main__":
 
     print("Loading model + learning category grammar …")
     model = build_model(
-        data_dir=_REPO / "training_data",
+        data_dir=_REPO / "data",
         cache_path=_REPO / "models" / "transition_model.pkl",
     )
     all_seqs = []
     for fam in ("MOSFET", "IGBT", "IC"):
-        p = _REPO / "training_data" / f"{fam}_variants.csv"
+        p = _REPO / "data" / f"{fam}_variants.csv"
         if p.exists():
             all_seqs += list(read_csv_sequences(p).values())
     grammar = learn_category_grammar(all_seqs)
