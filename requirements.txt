@@ -1,0 +1,16 @@
+# Industrial AI track — dependencies.
+#
+# The NEURAL pipeline (training + inference) needs these:
+torch>=2.0
+numpy>=1.24
+scikit-learn>=1.3
+matplotlib>=3.7
+
+# The PHYSICS harness (validation, refinery, fix, generators, exhaustive_test,
+# explain, export, reward) is PURE PYTHON STANDARD LIBRARY — no dependencies.
+# It runs on any Python 3.9+ with nothing installed, which is why all
+# correctness verification (exhaustive_test.py, integration_test.py) runs
+# anywhere, including CI and login nodes.
+#
+# A pixi environment is also provided (tracks/industrial-infineon/pixi.toml /
+# pixi_cuda.toml) for reproducible Leonardo provisioning.

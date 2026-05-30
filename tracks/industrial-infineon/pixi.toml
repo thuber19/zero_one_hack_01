@@ -1,0 +1,36 @@
+[workspace]
+name = "process-sequence-model"
+version = "0.1.0"
+description = "Semiconductor process sequence prediction with RF + Transformer"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[system-requirements]
+cuda = "12"
+
+[dependencies]
+python = "3.12.*"
+libstdcxx-ng = ">=13"
+
+[pypi-dependencies]
+torch = "==2.3.1"
+numpy = ">=1.26,<2.1"
+scikit-learn = ">=1.4"
+matplotlib = ">=3.8"
+
+# ---------------------------------------------------------------------------
+# Environment for Claude's procseq pipeline (solution/). It INHERITS the default
+# feature's torch==2.3.1 (CUDA 12 — the build that actually sees Leonardo's A100;
+# a newer torch pulls CUDA 13 and silently falls back to CPU) plus numpy/sklearn/
+# matplotlib, and only adds the HuggingFace stack on top. Run via:
+#   pixi run -e procseq python -m procseq....   (jobs/run.sh options 7/8 do this)
+# ---------------------------------------------------------------------------
+[feature.procseq.pypi-dependencies]
+torch = "==2.3.1"
+transformers = ">=4.44,<5"
+accelerate = ">=0.33"
+pyyaml = ">=6.0"
+tensorboard = "*"
+
+[environments]
+procseq = { features = ["procseq"] }

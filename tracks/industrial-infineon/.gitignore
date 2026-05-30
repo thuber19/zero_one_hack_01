@@ -1,0 +1,18 @@
+
+# local sample eval set (reproducible via make_sample_eval.py)
+sample_eval/
+# machine-specific convenience runner
+run_m3.sh
+
+# secrets / local run artifacts (never commit)
+creds.txt
+*.pem
+*_ed25519*
+id_rsa*
+*.key
+outputs_bench/
+outputs_leonardo/
+run_*/
+
+# generated bad/test datasets (reproducible via make_bad_testset.py)
+bad_testset/

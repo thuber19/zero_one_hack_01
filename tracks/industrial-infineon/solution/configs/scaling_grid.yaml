@@ -1,0 +1,5 @@
+# Cartesian grid for the scaling experiment. The sweep driver expands these.
+sizes: [tiny, small, base, large]
+data_per_family: [100, 1000, 5000, 20000]
+seed: 42
+max_steps: 4000

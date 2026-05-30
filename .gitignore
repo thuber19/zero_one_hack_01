@@ -438,3 +438,33 @@ Backups.backupdb
 MobileBackups.trash
 tmbootpicker.efi
 *.pt
+# Local training artifacts (regenerable; not committed)
+tracks/industrial-infineon/outputs_test/
+tracks/industrial-infineon/outputs_M1/
+tracks/industrial-infineon/outputs_M2/
+tracks/industrial-infineon/outputs_M3/
+tracks/industrial-infineon/outputs_integrated/
+tracks/industrial-infineon/_audit_export/
+tracks/industrial-infineon/synthetic_eval/
+tracks/industrial-infineon/submissions/
+tracks/industrial-infineon/bad_data/
+tracks/industrial-infineon/training_export/
+**/comparison_train.log
+**/*.log
+
+# Model caches
+**/models/*.pkl
+**/models/tm.pkl
+**/transition_model.pkl
+
+# Python
+**/__pycache__/
+*.pyc
+.venv*/
+*.egg-info/
+
+# OS
+.DS_Store
+
+# Keep the COMMITTED canonical run (outputs/) and committed plots tracked:
+!tracks/industrial-infineon/outputs/
