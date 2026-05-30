@@ -1,0 +1,70 @@
+{
+  "model": "lstm-baseline",
+  "date": "2026-05-30T09:29:55.030601Z",
+  "top1_accuracy": 0.8134698867797852,
+  "top5_accuracy": 0.9999538660049438,
+  "perplexity": 1.3746191263198853,
+  "mrr": 0.9039137959480286,
+  "probe_score": 24.753337376429997,
+  "probe_n": 100,
+  "n_tokens": 1972679,
+  "by_variant": {
+    "4": {
+      "top1_accuracy": 0.7867792844772339,
+      "n": 585989
+    },
+    "5": {
+      "top1_accuracy": 0.8231668472290039,
+      "n": 750261
+    },
+    "6": {
+      "top1_accuracy": 0.8266137838363647,
+      "n": 636429
+    }
+  },
+  "tokenizer_sha": "eabff3d0899712609c05df6d7fcc6146f3d2ac0f9a9ef5d7cb8736e45ea35137",
+  "split_sha": "6fe397bef7b1bbe5858048fc351648f26fa09759fc333aca9226df07f7043d17",
+  "vocab_hash": "02f28c1d8b87371e",
+  "seed": 42,
+  "model_params_M": 3.547264,
+  "elapsed_hours": 0.05604020463095771,
+  "config": {
+    "seed": 42,
+    "model": {
+      "embed_dim": 128,
+      "hidden_size": 512,
+      "num_layers": 2,
+      "dropout": 0.1
+    },
+    "optim": {
+      "lr": 0.001,
+      "lr_min": 0.0001,
+      "betas": [
+        0.9,
+        0.999
+      ],
+      "weight_decay": 0.01,
+      "eps": 1e-08,
+      "grad_clip": 1.0,
+      "warmup_frac": 0.05
+    },
+    "train": {
+      "per_device_batch": 128,
+      "epochs": 20,
+      "early_stop_patience": 3,
+      "val_every_epochs": 1,
+      "ckpt_every_epochs": 2,
+      "keep_recent_ckpts": 3,
+      "log_every_steps": 20,
+      "soft_walltime_hours": 2.0,
+      "precision": "fp32"
+    },
+    "eval": {
+      "top_k": [
+        1,
+        5
+      ],
+      "memorization_n": 100
+    }
+  }
+}
