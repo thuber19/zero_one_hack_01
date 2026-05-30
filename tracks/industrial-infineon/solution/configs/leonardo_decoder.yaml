@@ -9,6 +9,7 @@ decoder:
   lr: 0.0006
   max_steps: 4000
   eval_every: 250
+  constrained_decode: true   # veto rule-violating next steps via validate_sequence
 artifacts: artifacts
 decoder_ckpt: artifacts/decoder_base
 encoder_ckpt: artifacts/encoder_base

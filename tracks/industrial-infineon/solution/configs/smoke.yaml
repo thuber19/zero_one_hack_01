@@ -10,6 +10,7 @@ decoder:
   lr: 0.003
   max_steps: 5
   eval_every: 5
+  constrained_decode: true   # veto rule-violating next steps via validate_sequence
 encoder:
   size: tiny
   max_len: 256
