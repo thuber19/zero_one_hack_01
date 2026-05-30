@@ -5,6 +5,13 @@ will it hallucinate or be useless, how can I be sure?"* — followed by the exac
 gaps found and how each was closed. Every number below is reproducible with the
 commands listed; nothing here is taken on faith.
 
+> **Round 2 (deep per-file re-audit + fixes) — see the section at the bottom:
+> "Round 2: full per-file audit".** Four independent auditors tore through every
+> file; the HIGH+MED findings (false "guarantee" claims, partial OOD coverage,
+> circular self-eval, salted-seed non-reproducibility, fictional hard-negatives,
+> a few contained bugs) were ALL fixed and verified. This top section is the
+> original (Round 1) record; the bottom section is the current state.
+
 ## TL;DR
 
 - **The physics/rule engine is trustworthy and now *proven* equivalent to the
@@ -114,3 +121,74 @@ until the full-size training run by the team. **No score is "real" until the
 pipeline is run against the organizers' `eval_input_*.csv` + `eval_metrics.py`** —
 everything here proves the system is correct, robust, and spec-clean *up to* that
 final external step.
+
+---
+
+# Round 2: full per-file audit (every file, hardass, post-fix)
+
+Four independent auditors read every file; each finding was reproduced firsthand
+before fixing. Verdict legend: **WORKS** (verified) · **FIXED** (was broken,
+now verified) · **LIMIT** (works, with an honest residual limitation).
+
+## HIGH-severity findings — all FIXED & verified
+| # | File | Was | Now |
+|---|---|---|---|
+| H1 | `refinery.py` `constrained_decode` | "always valid" was FALSE (adversarial scorer → 8 violations) | **FIXED**: never appends an illegal step; legal-only termination; final trim guard; honest incomplete-but-valid fallback. Verified valid under adversarial/empty scorers. |
+| H2 | `fix.py` `repair` | 6/2000 fuzzed routes stayed invalid (deposit-after-cure) | **FIXED**: canonicalises deposit→cure order + relocates consumers; **0 unrepaired / 9000** fuzzed cases. |
+| H3 | `physics/process_knowledge.py` | `ELECTRICAL_TEST`/`PAD_WINDOW_OPEN`/`BACKSIDE_METAL` couldn't fire on renamed 4th-family steps | **FIXED**: `EventClass.unknown_keywords` (+category) fallbacks; rules now fire OOD; controls (`DEPOSIT PAD OXIDE`,`BACKSIDE GRIND`) stay clean; differential_fuzz still 0. |
+| H4 | `src/evaluate.py` self-eval | Task-3 F1/AUC circular (rule engine grading reference-labelled data; AUC pinned to 1.0) | **FIXED**: added an HONEST model-only signal (transformer-loss + RF ROC-AUC vs labels), clearly separated; production rule-engine decision labelled as reference-equivalent on in-vocab. |
+| H5 | `src/evaluate.py`, `src/generate_integrated_data.py` | `--seed` non-reproducible (salted `hash()`) | **FIXED**: stable `zlib.crc32`. |
+
+## MED findings — all FIXED
+`bad_data_generator._hard_negative_traps` (was only `baseline_valid` → now real
+`consecutive_deposit`+`redundant_clean`) · `data_pipeline.extract_rf_features`
+4th-family KeyError (`.get(...,-1)`) · `transformer_model.forward` float/bool mask
+mismatch (→ bool, identical masking) · `evaluate.compute_completion_metrics`
+over-generation under-penalised (→ `max(len(pred),len(true))`) ·
+`generate_integrated_data` mutated `PF.TAGS` global + hardcoded model_config
+(→ save/restore, removed) · `validate_submission` empty-SCORE no-op (→ non-fatal
+WARN) · `benchmark_models` hardcoded "F1 1.000" line (→ removed) · dead code
+(`fix.py` import, `pseudo_family._ALL_KNOWN` scope) · honest docstrings on
+`real_family_benchmark` + `exhaustive_test[7]`.
+
+## Per-file verdict (all 40 modules)
+**Physics** — `state_machine.py` WORKS (engine≡reference in-vocab, proven) ·
+`process_knowledge.py` FIXED (OOD ordering) · `ontology.py` WORKS (LIMIT: rare
+back-end verbs → UNKNOWN, inert) · `step_semantics.py` WORKS · `parameters.py`
+WORKS (additive, never scores) · `known_vocab.py` WORKS.
+**Glue/model** — `refinery.py` FIXED · `fix.py` FIXED · `explain.py` WORKS ·
+`reward.py` WORKS · `transformer_model.py` WORKS+FIXED (aux head verified) ·
+`tokenizer.py` WORKS · `random_forest.py` WORKS (pickle note added) ·
+`data_pipeline.py` FIXED.
+**Data/train/eval** — `bad_data_generator.py` FIXED · `pseudo_family.py` FIXED ·
+`export_training_data.py` WORKS · `generate_data.py` WORKS ·
+`generate_integrated_data.py` FIXED · `train.py` WORKS (UNK-dropout + aux head
+verified; LIMIT: `--init-from` is `strict=False`, user-gated) · `evaluate.py`
+FIXED · `inference.py` WORKS+FIXED (length guards, spec-clean submissions).
+**Tests/benchmarks** — `exhaustive_test.py` 42/42 (honest labels) ·
+`differential_fuzz.py` SOUND (the heavyweight proof) · `integration_test.py`
+WORKS (its "never invalid" claim is now actually TRUE) · `benchmark_models.py`
+FIXED · `robustness_test.py` WORKS · `category_eval.py` WORKS ·
+`self_score.py`/`validate_submission.py`/`make_sample_eval.py` WORKS.
+
+## Residual honest limitations (not bugs — documented)
+1. **No run against the organizers' real grader yet** (files not distributed).
+   The whole stack is spec-clean and self-scored, but the official number is unknown.
+2. **OOD ordering coverage is keyword/category-based**, so a 4th-family step that
+   shares NO keyword/category with the known operation could still be missed.
+   In-vocab is exact (proven); OOD is best-effort-by-physics, much improved.
+3. **The neural model is modest** (tiny/CPU). Its standalone anomaly AUC and OOD
+   next-step are well below 1.0 (now reported honestly). The rule engine — not
+   the model — is what makes detection exact; the model is a constrained suggester.
+4. **`real_family_benchmark` is author-graded** (relabelled as a transparency
+   probe, not an independent benchmark).
+
+## Reproduce the current state
+```
+python exhaustive_test.py        # 42/42
+python differential_fuzz.py --n 8000   # engine≡grader, all 10 rules, 0 disagreements
+python robustness_test.py --model-dir outputs_M1   # no crash on malformed input
+python integration_test.py       # physics lift; Task2 ON = 1.00 valid; T3-OOD F1 1.000
+# guarantees:
+python -c "import refinery,physics.state_machine as S;r=refinery.PhysicsRefinery(category_mode='off');import physics.state_machine as sm;print('decode valid:', not sm.validate_by_state_machine(['RECEIVE WAFER LOT','PRE CLEAN WAFER']+r.constrained_decode(['RECEIVE WAFER LOT','PRE CLEAN WAFER'],lambda s:['OXIDE ETCH'])))"
+```
