@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --job-name=gpt_fab_full
-#SBATCH --account=EUHPC_D30_031
+#SBATCH --account=euhpc_d30_031
 #SBATCH --partition=boost_usr_prod
-#SBATCH --reservation=strancc
+#SBATCH --reservation=s_tra_ncc
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=4
 #SBATCH --cpus-per-task=8
