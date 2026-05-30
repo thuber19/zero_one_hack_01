@@ -1,0 +1,10 @@
+{
+  "p95_loss": 0.7934306263923645,
+  "p99_loss": 1.068430781364441,
+  "ood_p99": 0.25172368341804235,
+  "calibration_n": 2000,
+  "n_per_step_samples": 194000,
+  "calibration_date": "2026-05-30",
+  "variant_tag": "all_variants",
+  "seed": 42
+}

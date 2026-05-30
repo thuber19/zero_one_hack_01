@@ -20,13 +20,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import torch
-from src.infer import load_model, pseudo_perplexity_batch
+from src.infer import load_model, score_sequence as _score_seq
 from src.tokenizer import MLMTokenizer
 
-EVAL_DIR  = ROOT / "tracks" / "industrial-infineon" / "eval"
-RESULTS   = ROOT / "results"
+EVAL_DIR   = ROOT / "tracks" / "industrial-infineon" / "eval"
+RESULTS    = ROOT / "results"
 RESULTS.mkdir(exist_ok=True)
 CHECKPOINT = ROOT / "checkpoints" / "002" / "checkpoint_best.pt"
+THRESHOLD_FILE = ROOT / "checkpoints" / "002" / "threshold.json"
 
 
 def read_csv(path: Path) -> list[dict]:
@@ -34,30 +35,12 @@ def read_csv(path: Path) -> list[dict]:
         return list(csv.DictReader(f))
 
 
-def score_sequence_raw(model, tokenizer: MLMTokenizer, variant: str, steps: list[str], device: torch.device) -> dict:
-    """Return raw per-step losses and aggregate scores."""
-    max_len = model.cfg.max_len
-    token_ids = tokenizer.encode_mlm(variant, steps, max_len=max_len)
-    losses = pseudo_perplexity_batch(model, tokenizer, token_ids, device)
-
-    scored = [l for l in losses if l > 0.0]
-    if not scored:
-        return {"mean": 0.0, "max": 0.0, "per_step": losses, "n_scored": 0}
-
-    mean = sum(scored) / len(scored)
-    return {
-        "mean": mean,
-        "max": max(losses),
-        "per_step": losses,
-        "n_scored": len(scored),
-    }
-
-
-def build_per_step(steps: list[str], example_id: str, losses: list[float], risk_scale: float) -> list[dict]:
+def build_per_step(steps: list[str], example_id: str, losses: list[float], p99_loss: float) -> list[dict]:
     result = []
     for i, step in enumerate(steps):
         raw = losses[i] if i < len(losses) else 0.0
-        risk = min(raw / risk_scale, 1.0)
+        # Normalize against calibrated p99 so risk_score is meaningful
+        risk = min(raw / max(p99_loss, 0.01), 1.0)
         result.append({
             "step_id": f"{example_id}_s{i:03d}",
             "step_name": step,
@@ -79,7 +62,14 @@ def main():
     print(f"Device: {device}")
     print(f"Loading model from {CHECKPOINT.relative_to(ROOT)} ...")
     model, tokenizer = load_model(CHECKPOINT, device)
-    print(f"Model ready — vocab={tokenizer.vocab_size}, max_len={model.cfg.max_len}\n")
+    print(f"Model ready — vocab={tokenizer.vocab_size}, max_len={model.cfg.max_len}")
+
+    threshold = json.loads(THRESHOLD_FILE.read_text())
+    p95  = threshold["p95_loss"]
+    p99  = threshold["p99_loss"]
+    ood  = threshold["ood_p99"]
+    print(f"Calibrated thresholds — p95={p95:.4f}  p99={p99:.4f}  ood_p99={ood:.4f}  "
+          f"(n={threshold['calibration_n']} seqs, {threshold['n_per_step_samples']} steps)\n")
 
     # -----------------------------------------------------------------------
     # Load eval CSVs
@@ -106,25 +96,36 @@ def main():
             steps = [s.strip() for s in seq_str.split("|") if s.strip()]
 
             t0 = time.time()
-            result = score_sequence_raw(model, tokenizer, variant, steps, device)
+            report = _score_seq(
+                model, tokenizer,
+                variant=variant,
+                steps=steps,
+                threshold=threshold,
+                seq_id=eid,
+                device=device,
+            )
             elapsed = time.time() - t0
 
-            all_scores.append({"eid": eid, "mean": result["mean"], "label": true_label})
+            all_scores.append({"eid": eid, "mean": report.seq_score_mean, "label": true_label})
 
             if (i + 1) % 100 == 0 or i == 0:
                 eta = (time.time() - t_start) / (i + 1) * (len(rows) - i - 1)
-                print(f"  [{label_str}] {i+1:4d}/{len(rows)}  {eid}  mean={result['mean']:.4f}  {elapsed:.2f}s  ETA {eta:.0f}s")
+                flag = "🚨" if (report.is_anomalous or report.is_ood) else "✓"
+                print(f"  [{label_str}] {i+1:4d}/{len(rows)}  {eid}  "
+                      f"mean={report.seq_score_mean:.4f}  max={report.seq_score_max:.4f}  "
+                      f"{flag}  {elapsed:.2f}s  ETA {eta:.0f}s")
 
-            # store raw; will convert to IS_VALID after calibration
             pred_rows.append({
                 "EXAMPLE_ID":    eid,
-                "mean_loss":     result["mean"],
-                "max_loss":      result["max"],
-                "n_scored":      result["n_scored"],
+                "mean_loss":     report.seq_score_mean,
+                "max_loss":      report.seq_score_max,
+                "is_anomalous":  report.is_anomalous,
+                "is_ood":        report.is_ood,
+                "anomalous_steps": report.anomalous_steps,
                 "true_label":    true_label,
                 "family":        family,
                 "steps":         steps,
-                "per_step_loss": result["per_step"],
+                "per_step_loss": report.per_step_raw_loss,
             })
 
     print("=== Scoring anomaly sequences ===")
@@ -133,31 +134,17 @@ def main():
     run(valid_rows,   true_label=1, seq_col="PARTIAL_SEQUENCE", label_str="VALID  ")
 
     # -----------------------------------------------------------------------
-    # Calibrate threshold using valid-set mean losses
+    # Build output rows using calibrated thresholds
     # -----------------------------------------------------------------------
-    valid_means  = sorted(r["mean_loss"] for r in pred_rows if r["true_label"] == 1)
-    anomaly_means= sorted(r["mean_loss"] for r in pred_rows if r["true_label"] == 0)
-
-    # Use 95th percentile of valid scores as the anomaly threshold
-    p95_idx = int(0.95 * len(valid_means))
-    threshold = valid_means[p95_idx] if valid_means else 1.0
-
-    # risk_scale: normalise raw loss to [0,1] for frontend risk_score display
-    p99_idx = int(0.99 * len(anomaly_means))
-    risk_scale = max(anomaly_means[p99_idx] if anomaly_means else 3.0, 0.5)
-
-    print(f"\nCalibrated threshold (p95 of valid means): {threshold:.4f}")
-    print(f"Risk scale (p99 of anomaly means):        {risk_scale:.4f}")
-
-    # -----------------------------------------------------------------------
-    # Build output rows
-    # -----------------------------------------------------------------------
+    # is_valid=0 if model says anomalous OR OOD
+    print(f"\nBuilding predictions with calibrated thresholds...")
     csv_rows = []
     for r in pred_rows:
         mean = r["mean_loss"]
         # validity score: 1 = definitely valid, 0 = definitely anomalous
-        validity_score = 1.0 / (1.0 + mean)
-        is_valid_pred  = 1 if mean <= threshold else 0
+        # Use normalized score against ood_p99 so AUC is properly calibrated
+        validity_score = max(0.0, 1.0 - mean / (ood * 2))
+        is_valid_pred  = 0 if (r["is_anomalous"] or r["is_ood"]) else 1
 
         csv_rows.append({
             "EXAMPLE_ID":     r["EXAMPLE_ID"],
@@ -166,14 +153,14 @@ def main():
             "PREDICTED_RULE": "",
         })
 
-        per_step = build_per_step(r["steps"], r["EXAMPLE_ID"], r["per_step_loss"], risk_scale)
+        per_step = build_per_step(r["steps"], r["EXAMPLE_ID"], r["per_step_loss"], p99)
         risk_steps = sum(1 for s in per_step if s["risk_score"] >= 0.70)
         batch_json.append({
             "batch_id":          r["EXAMPLE_ID"],
             "family":            r["family"],
             "true_is_valid":     r["true_label"],
             "predicted_valid":   is_valid_pred,
-            "predicted_yield":   round(max(0.0, 1.0 - mean / risk_scale), 4),
+            "predicted_yield":   round(max(0.0, 1.0 - mean / max(p99, 0.01)), 4),
             "confidence":        round(validity_score, 4),
             "risk_steps_detected": risk_steps,
             "anomalous_batches": 0 if r["true_label"] == 1 else 1,
@@ -211,20 +198,20 @@ def main():
     f1   = 2 * prec * rec / (prec + rec) if (prec + rec) else 0
 
     print(f"""
-┌─────────────────────────────────────────────────┐
-│  QUICK EVAL RESULTS (BERT MLM checkpoint 002)   │
-├─────────────────────────────────────────────────┤
-│  Total sequences:  {len(pred_rows):>4d}                        │
-│  Anomaly (label=0):{len(anomaly_rows):>4d}                        │
-│  Valid   (label=1):{len(valid_rows):>4d}                        │
-│  Threshold:        {threshold:.4f}                     │
-├─────────────────────────────────────────────────┤
-│  Accuracy:  {n_correct/len(pred_rows):.4f}  ({n_correct}/{len(pred_rows)})           │
-│  Precision: {prec:.4f}                           │
-│  Recall:    {rec:.4f}                           │
-│  F1:        {f1:.4f}                           │
-│  Confusion: TP={tp:<4d} FP={fp:<4d} FN={fn:<4d} TN={tn:<4d}   │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│  QUICK EVAL RESULTS (BERT MLM + calibrated thresh)  │
+├─────────────────────────────────────────────────────┤
+│  Total sequences:  {len(pred_rows):>4d}                          │
+│  Anomaly (label=0):{len(anomaly_rows):>4d}                          │
+│  Valid   (label=1):{len(valid_rows):>4d}                          │
+│  p95_loss={p95:.4f}  p99={p99:.4f}  ood_p99={ood:.4f}   │
+├─────────────────────────────────────────────────────┤
+│  Accuracy:  {n_correct/len(pred_rows):.4f}  ({n_correct}/{len(pred_rows)})             │
+│  Precision: {prec:.4f}                             │
+│  Recall:    {rec:.4f}                             │
+│  F1:        {f1:.4f}                             │
+│  TP={tp:<4d} FP={fp:<4d} FN={fn:<4d} TN={tn:<4d}              │
+└─────────────────────────────────────────────────────┘
 """)
     print(f"Run official eval:")
     print(f"  python tracks/industrial-infineon/eval/eval_metrics.py \\")

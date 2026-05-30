@@ -83,16 +83,17 @@ def pseudo_perplexity_batch(
     tokenizer: MLMTokenizer,
     token_ids: list[int],
     device: torch.device,
+    chunk_size: int = 32,
 ) -> list[float]:
     """Batch pseudo-perplexity: construct N×T matrix with MASK at each position.
 
     Returns per-step cross-entropy loss for each non-PAD/CLS/SEP/VARIANT position.
     Positions that are special tokens are returned as 0.0.
+    chunk_size bounds peak memory by processing scored positions in chunks.
     """
     T = len(token_ids)
     ids_tensor = torch.tensor(token_ids, dtype=torch.long)
 
-    # Identify scored positions (non-special tokens)
     special_ids = {
         tokenizer.pad_id, tokenizer.cls_id, tokenizer.sep_id,
         tokenizer.variant_id("IC"), tokenizer.variant_id("IGBT"), tokenizer.variant_id("MOSFET"),
@@ -102,26 +103,24 @@ def pseudo_perplexity_batch(
     if not scored_positions:
         return [0.0] * T
 
-    N = len(scored_positions)
-    # Build N×T matrix: row i has MASK at scored_positions[i]
-    batch_ids = ids_tensor.unsqueeze(0).expand(N, T).clone()  # [N, T]
-    for i, pos in enumerate(scored_positions):
-        batch_ids[i, pos] = tokenizer.mask_id
-
-    attention_mask = (ids_tensor != tokenizer.pad_id).long().unsqueeze(0).expand(N, T)
-
-    batch_ids = batch_ids.to(device)
-    attention_mask = attention_mask.to(device)
+    attention_mask = (ids_tensor != tokenizer.pad_id).long().to(device)
+    losses = [0.0] * T
 
     with torch.no_grad():
-        logits = model(batch_ids, attention_mask)  # [N, T, V]
-
-    losses = [0.0] * T
-    for i, pos in enumerate(scored_positions):
-        logit_at_pos = logits[i, pos, :].float()
-        true_id = token_ids[pos]
-        loss = F.cross_entropy(logit_at_pos.unsqueeze(0), torch.tensor([true_id], device=device))
-        losses[pos] = loss.item()
+        for chunk_start in range(0, len(scored_positions), chunk_size):
+            chunk = scored_positions[chunk_start: chunk_start + chunk_size]
+            C = len(chunk)
+            batch_ids = ids_tensor.unsqueeze(0).expand(C, T).clone().to(device)
+            for i, pos in enumerate(chunk):
+                batch_ids[i, pos] = tokenizer.mask_id
+            attn = attention_mask.unsqueeze(0).expand(C, T)
+            logits = model(batch_ids, attn)  # [C, T, V]
+            for i, pos in enumerate(chunk):
+                loss = F.cross_entropy(
+                    logits[i, pos, :].float().unsqueeze(0),
+                    torch.tensor([token_ids[pos]], device=device),
+                )
+                losses[pos] = loss.item()
 
     return losses
 
