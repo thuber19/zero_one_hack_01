@@ -45,12 +45,16 @@ def run_anomaly(cfg, real=False):
         out = art / "submission_task3.csv"
     tok = load_tokenizer(Path(cfg["encoder_ckpt"]))
     model = _load_encoder(cfg["encoder_ckpt"], tok)
-    rows = []
     with src.open() as f:
-        for r in csv.DictReader(f):
-            steps = r["SEQUENCE"].split("|")
-            iv, sc, rule = classify_sequence(model, tok, steps, r["FAMILY"], RULE_IDS)
-            rows.append([r["EXAMPLE_ID"], iv, f"{sc:.4f}", rule])
+        in_rows = list(csv.DictReader(f))
+    print(f"  [task3{'/real' if real else ''}] classifying {len(in_rows)} sequences...", flush=True)
+    rows = []
+    for i, r in enumerate(in_rows, 1):
+        steps = r["SEQUENCE"].split("|")
+        iv, sc, rule = classify_sequence(model, tok, steps, r["FAMILY"], RULE_IDS)
+        rows.append([r["EXAMPLE_ID"], iv, f"{sc:.4f}", rule])
+        if i % 200 == 0 or i == len(in_rows):
+            print(f"    task3 {i}/{len(in_rows)}", flush=True)
     with out.open("w", newline="") as f:
         w = csv.writer(f); w.writerow(["EXAMPLE_ID","IS_VALID","SCORE","PREDICTED_RULE"])
         w.writerows(rows)

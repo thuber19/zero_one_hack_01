@@ -144,12 +144,17 @@ def run_task2(cfg, real=False):
     constrain = bool(cfg.get("decoder", {}).get("constrained_decode", False))
     rows_out = []
     with _eval_input(cfg, "eval_input_valid.csv", real).open() as f:
-        for r in csv.DictReader(f):
-            steps = r["PARTIAL_SEQUENCE"].split("|")
-            suffix = complete_sequence(model, tok, steps, r["FAMILY"],
-                                       max_new=cfg["decoder"].get("max_len", 256),
-                                       constrain=constrain)
-            rows_out.append([r["EXAMPLE_ID"], "|".join(suffix)])
+        rows = list(csv.DictReader(f))
+    print(f"  [task2{'/real' if real else ''}] completing {len(rows)} sequences"
+          f" (constrained={constrain})...", flush=True)
+    for i, r in enumerate(rows, 1):
+        steps = r["PARTIAL_SEQUENCE"].split("|")
+        suffix = complete_sequence(model, tok, steps, r["FAMILY"],
+                                   max_new=cfg["decoder"].get("max_len", 256),
+                                   constrain=constrain)
+        rows_out.append([r["EXAMPLE_ID"], "|".join(suffix)])
+        if i % 100 == 0 or i == len(rows):
+            print(f"    task2 {i}/{len(rows)}", flush=True)
     out = _sub_out(cfg, "submission_task2.csv", real)
     with out.open("w", newline="") as f:
         w = csv.writer(f); w.writerow(["EXAMPLE_ID","PREDICTED_SEQUENCE"])

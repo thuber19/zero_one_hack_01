@@ -31,9 +31,14 @@ submit_procseq() {
         exit 1
     fi
 
-    # Build the 'procseq' pixi environment on the LOGIN node (compute nodes have no internet).
-    echo "Installing the 'procseq' pixi environment (login node, one-time, ~5 min)..."
-    "$PIXI" install --manifest-path "$PROJECT_DIR/pixi.toml" -e procseq || { echo "pixi install failed"; exit 1; }
+    # Create the 'procseq' pixi env ONCE on the LOGIN node (compute nodes have no internet).
+    # Skip if it already exists from a previous run -- nothing to download.
+    if [ -d "$PROJECT_DIR/.pixi/envs/procseq" ]; then
+        echo "procseq pixi environment already present -> skipping install."
+    else
+        echo "Creating the 'procseq' pixi environment (login node, one-time, ~5 min)..."
+        "$PIXI" install --manifest-path "$PROJECT_DIR/pixi.toml" -e procseq || { echo "pixi install failed"; exit 1; }
+    fi
 
     mkdir -p "$OUTDIR"
 
