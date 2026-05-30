@@ -38,8 +38,15 @@ for _s in (sys.stdout, sys.stderr):
     except Exception:
         pass
 
-from generate_sequences import read_csv_sequences, validate_sequence as reference
+from generate_sequences import read_csv_sequences, validate_sequence as _ref_raw
 from physics.state_machine import validate_by_state_machine as engine
+from physics.state_machine import canonicalize_step
+
+
+def reference(seq):
+    # Mirror production: validate_sequence_combined canonicalises before calling
+    # the reference, so the fair comparison feeds the reference canonical input too.
+    return _ref_raw([canonicalize_step(s) for s in seq])
 
 
 def load_corpus():
@@ -60,7 +67,14 @@ def mutate(seq, vocab, rng):
     kind = rng.choice([
         "delete", "delete", "delete_block", "insert", "swap_adjacent",
         "swap_random", "duplicate", "truncate", "move_block", "shuffle_window",
+        "lowercase", "titlecase", "double_space",   # casing/whitespace noise (R1)
     ])
+    if kind == "lowercase":
+        i = rng.randrange(len(s)); s[i] = s[i].lower(); return s
+    if kind == "titlecase":
+        i = rng.randrange(len(s)); s[i] = s[i].title(); return s
+    if kind == "double_space":
+        i = rng.randrange(len(s)); s[i] = s[i].replace(" ", "  ", 1); return s
     if kind == "delete":
         del s[rng.randrange(len(s))]
     elif kind == "delete_block":

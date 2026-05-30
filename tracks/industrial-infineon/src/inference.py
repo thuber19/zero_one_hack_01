@@ -25,7 +25,7 @@ _SUBROOT = _Path(__file__).resolve().parent.parent
 for _p in (str(_SUBROOT), str(_SUBROOT / "training_data")):
     if _p not in _sys.path:
         _sys.path.insert(0, _p)
-from physics.state_machine import validate_sequence_combined
+from physics.state_machine import validate_sequence_combined, unknown_tokens as _unknown_tokens
 from refinery import PhysicsRefinery, _ranked as _refinery_ranked
 import fix as _fix
 
@@ -293,6 +293,13 @@ class ProcessPredictor:
         has_rule_violation = len(rule_violations) > 0
         predicted_rule = rule_violations[0].rule if rule_violations else ""
 
+        # Explicit uncertainty (audit R2): if NO rule fired but the sequence
+        # contains an UNKNOWN-classified token, a hidden violation cannot be ruled
+        # out — flag INSUFFICIENT_INFORMATION instead of a silent confident pass.
+        unknowns = _unknown_tokens(steps) if use_physics else []
+        verdict = ("INVALID" if has_rule_violation
+                   else "INSUFFICIENT_INFORMATION" if unknowns else "VALID")
+
         # The 10 rules ARE the definition of invalid, so the validator is
         # authoritative. The model loss / RF only modulate the SCORE (= P valid)
         # to separate the classes for ROC-AUC.
@@ -304,6 +311,10 @@ class ProcessPredictor:
             rf_score = 1.0 if len(rf_violations) == 0 else max(0.0, 1.0 - len(rf_violations) * 0.2)
             combined_score = max(0.85, 0.5 * loss_score + 0.5 * rf_score)
             is_valid = True
+            # No proof of invalidity, but UNKNOWN tokens => cap the confidence and
+            # make the uncertainty visible (never a silent 1.0-ish pass on OOD).
+            if verdict == "INSUFFICIENT_INFORMATION":
+                combined_score = min(combined_score, 0.5)
 
         # Detect -> explain -> repair: attach the physical reason and concrete
         # fix for every violation (drives the demo and the engineer-facing UX).
@@ -317,6 +328,9 @@ class ProcessPredictor:
 
         return {
             "is_valid": is_valid,
+            "verdict": verdict,                    # VALID / INVALID / INSUFFICIENT_INFORMATION
+            "insufficient_information": verdict == "INSUFFICIENT_INFORMATION",
+            "unknown_tokens": unknowns[:10],       # explicit: what we could not classify
             "score": round(combined_score, 4),
             "predicted_rule": predicted_rule,
             "explanation": explanation,

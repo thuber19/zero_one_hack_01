@@ -30,7 +30,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from physics.state_machine import validate_sequence_combined
+from physics.state_machine import validate_sequence_combined, validate_with_confidence
 from physics.spec_strict import strict_advisory
 import fix as _fix
 
@@ -38,9 +38,12 @@ import fix as _fix
 def deterministic_report(steps: list[str]) -> dict:
     """The trustworthy core — pure rule logic, no model, no hallucination."""
     scored = validate_sequence_combined(steps)
+    verdict, _v, unknowns = validate_with_confidence(steps)
     rep = _fix.repair(list(steps))            # verified repair (engine-checked)
     strict = strict_advisory(steps)
     return {
+        "verdict": verdict,                       # VALID / INVALID / INSUFFICIENT_INFORMATION
+        "unknown_tokens": unknowns[:10],
         "scored_valid": len(scored) == 0,
         "scored_violations": sorted({v.rule for v in scored}),
         "scored_detail": [(v.rule, v.step_index, v.step_name) for v in scored],

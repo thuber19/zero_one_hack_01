@@ -52,6 +52,16 @@ def _warn_once(key: str, msg: str) -> None:
         print(f"[physics WARNING] {msg}", file=sys.stderr)
 
 
+def canonicalize_step(step: str) -> str:
+    """Normalise a step token to the canonical form the reference checker expects:
+    UPPER-case, single-spaced, stripped. The grader (generate_sequences) matches
+    step names CASE-SENSITIVELY against uppercase sets; without this, lowercase or
+    double-spaced input would be recognised by our engine (which upper-cases) but
+    NOT by the reference, making the two diverge (audit finding R1). Canonicalising
+    at the boundary makes the engine and the reference agree on any casing/spacing."""
+    return " ".join(step.upper().split())
+
+
 # ---------------------------------------------------------------------------
 # Wafer State — generic, driven by the KB
 # ---------------------------------------------------------------------------
@@ -120,6 +130,7 @@ def apply_step(state: WaferState, step: str) -> tuple[WaferState, list[PhysicsVi
     The order of checks mirrors the reference validator's rule order so that the
     first reported violation matches on single-rule sequences.
     """
+    step = canonicalize_step(step)   # case/whitespace-insensitive, matches grader
     i = state.step_index
     new_state = WaferState(
         step_index=i + 1,
@@ -242,6 +253,9 @@ def validate_sequence_combined(steps: list[str]) -> list[PhysicsViolation]:
     Rationale audited 2026-05: the previous "reference-first always" order
     inherited the reference's vocab-locked false positives on OOD families.
     """
+    # Canonicalise first so the vocab routing, the reference call, and the engine
+    # all see identical strings (fixes the casing/whitespace divergence, R1).
+    steps = [canonicalize_step(s) for s in steps]
     try:
         from physics.known_vocab import KNOWN_VOCAB
     except Exception as e:
@@ -269,6 +283,49 @@ def validate_sequence_combined(steps: list[str]) -> list[PhysicsViolation]:
                        "category engine instead (engine==reference proven on in-vocab, "
                        "so the verdict is unchanged — but the direct-grader call is lost).")
     return validate_by_state_machine(steps)
+
+
+# ---------------------------------------------------------------------------
+# Explicit confidence / uncertainty — no silent low-confidence pass
+# ---------------------------------------------------------------------------
+
+# Verdict states (audit R2): the system must be able to SAY when it cannot be sure,
+# instead of silently returning VALID for a sequence containing an unclassifiable
+# (UNKNOWN) token that could itself be a hidden rule trigger or enabler.
+VALID = "VALID"
+INVALID = "INVALID"
+INSUFFICIENT_INFORMATION = "INSUFFICIENT_INFORMATION"
+
+
+def unknown_tokens(steps: list[str]) -> list[str]:
+    """Canonical non-special steps whose physical category is UNKNOWN (the engine
+    cannot reason about them, so any rule they might trigger/enable is invisible)."""
+    from physics.ontology import classify_step
+    out = []
+    for s in steps:
+        cs = canonicalize_step(s)
+        if not cs or (cs.startswith("[") and cs.endswith("]")):
+            continue
+        if classify_step(cs) == "UNKNOWN":
+            out.append(cs)
+    return out
+
+
+def validate_with_confidence(steps: list[str]):
+    """Return (verdict, violations, unknown_tokens).
+      INVALID                 -> a rule fired (definitely bad)
+      INSUFFICIENT_INFORMATION-> no rule fired BUT an UNKNOWN-classified token is
+                                 present, so a hidden violation cannot be ruled out
+      VALID                   -> no rule fired and every token is classifiable
+    The binary submission label stays derivable (INVALID->0, else 1); this only
+    makes the uncertainty EXPLICIT so OOD opaque tokens never pass silently."""
+    viol = validate_sequence_combined(steps)
+    if viol:
+        return INVALID, viol, []
+    unk = unknown_tokens(steps)
+    if unk:
+        return INSUFFICIENT_INFORMATION, [], unk
+    return VALID, [], []
 
 
 # ---------------------------------------------------------------------------
