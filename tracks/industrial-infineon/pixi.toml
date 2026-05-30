@@ -19,23 +19,17 @@ scikit-learn = ">=1.4"
 matplotlib = ">=3.8"
 
 # ---------------------------------------------------------------------------
-# Isolated environment for Claude's procseq pipeline (solution/). Kept separate
-# (no-default-feature) so the team's default env is untouched. Run via:
+# Environment for Claude's procseq pipeline (solution/). It INHERITS the default
+# feature's torch==2.3.1 (CUDA 12 — the build that actually sees Leonardo's A100;
+# a newer torch pulls CUDA 13 and silently falls back to CPU) plus numpy/sklearn/
+# matplotlib, and only adds the HuggingFace stack on top. Run via:
 #   pixi run -e procseq python -m procseq....   (jobs/run.sh options 7/8 do this)
 # ---------------------------------------------------------------------------
-[feature.procseq.dependencies]
-python = "3.12.*"
-libstdcxx-ng = ">=13"
-
 [feature.procseq.pypi-dependencies]
-torch = ">=2.4"
-transformers = ">=4.44"
-tokenizers = ">=0.19"
+transformers = ">=4.44,<5"
 accelerate = ">=0.33"
-numpy = ">=1.26"
 pyyaml = ">=6.0"
-matplotlib = ">=3.8"
 tensorboard = "*"
 
 [environments]
-procseq = { features = ["procseq"], no-default-feature = true }
+procseq = ["procseq"]

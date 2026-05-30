@@ -72,6 +72,9 @@ def main(argv=None):
         print(f"  device={acc.device} | precision={cfg.get('precision','no')} | "
               f"max_steps={max_steps} | bs={ec.get('batch_size',4)} | lr={ec.get('lr',3e-3)} | "
               f"contrastive={'ON' if con_on else 'OFF'}", flush=True)
+        print(f"  torch={torch.__version__} | cuda_available={torch.cuda.is_available()}"
+              + ("  *** WARNING: training on CPU — GPU not visible to torch! ***"
+                 if str(acc.device) == "cpu" else ""), flush=True)
         print(f"  train items={len(train_items)} | val sample={min(n_val or 8, 128)}", flush=True)
         print("=" * 64, flush=True)
 

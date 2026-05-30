@@ -82,6 +82,9 @@ def main(argv=None):
         print(f"  DECODER '{dc['size']}' | params={n_params/1e6:.2f}M | vocab={len(tok)}", flush=True)
         print(f"  device={acc.device} | precision={cfg.get('precision','no')} | "
               f"max_steps={max_steps} | bs={dc.get('batch_size',4)} | lr={dc.get('lr',3e-3)}", flush=True)
+        print(f"  torch={torch.__version__} | cuda_available={torch.cuda.is_available()}"
+              + ("  *** WARNING: training on CPU — GPU not visible to torch! ***"
+                 if str(acc.device) == "cpu" else ""), flush=True)
         print(f"  train pairs={len(pairs)} (~{len(pairs)//len(FAMILIES)}/family) | "
               f"val sample={len(val_pairs)}", flush=True)
         print("=" * 64, flush=True)
