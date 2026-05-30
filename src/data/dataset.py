@@ -11,7 +11,7 @@ class PackedShardDataset(Dataset):
     """Loads .pt shards (each a LongTensor [N, max_len]) and concatenates."""
 
     def __init__(self, shard_paths: list[str | Path]):
-        tensors = [torch.load(p, map_location="cpu") for p in shard_paths]
+        tensors = [torch.load(p, map_location="cpu", weights_only=True) for p in shard_paths]
         self.data: torch.Tensor = torch.cat(tensors, dim=0).long()
 
     def __len__(self) -> int:

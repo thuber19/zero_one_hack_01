@@ -163,7 +163,7 @@ def evaluate(
                     mask.reshape(-1),
                     vids.reshape(-1),
                 )
-    if dist.is_initialized():
+    if dist.is_initialized() and world_size > 1:
         dist.all_reduce(total_loss, op=dist.ReduceOp.SUM)
         dist.all_reduce(total_tokens, op=dist.ReduceOp.SUM)
     avg_loss = (total_loss / total_tokens.clamp(min=1)).item()
@@ -354,11 +354,17 @@ def main() -> int:
     if is_main(rank):
         save_checkpoint(out_dir, "final", model, optimizer, {}, epoch, global_step, cfg, vocab_h, tokenizer.vocab_size)
 
+    # Park ranks 1-3 here so they don't destroy the process group while rank 0
+    # runs test eval (which would cause the NCCL ALLREDUCE to hang/timeout).
+    if dist.is_initialized():
+        dist.barrier()
+
+    if is_main(rank):
         # Final test eval on best checkpoint
         test_path = data_dir / "test.pt"
         if test_path.exists():
             log(rank, "loading best checkpoint for test eval...")
-            ck = torch.load(out_dir / "checkpoint_best.pt", map_location=device)
+            ck = torch.load(out_dir / "checkpoint_best.pt", map_location=device, weights_only=False)
             (model.module if isinstance(model, DDP) else model).load_state_dict(ck["model"])
             test_ds = PackedShardDataset([test_path])
             test_loader = DataLoader(test_ds, batch_size=bsz, shuffle=False, num_workers=2, pin_memory=True)
