@@ -21,6 +21,9 @@ export PATH="$HOME/.pixi/bin:$PATH"
 RUN="$SCRATCH/run_${SLURM_JOB_ID}"
 PIXI="pixi run --as-is"
 export TRANSFORMERS_OFFLINE=1            # compute nodes are offline; data is in-repo
+export PYTHONUNBUFFERED=1                # stream logs live to slurm-<id>.out (no buffering)
+NO_RF="--no-rf"                          # skip the slow CPU Random Forest (transformer+physics is the core);
+                                         # set NO_RF="" to also train the RF candidate filter.
 # If you ever need internet on the compute node (low-bandwidth only — it rotates):
 # export HTTPS_PROXY="http://proxyuser:5dd1d2bd00@10.99.0.1:38425"
 # export HTTP_PROXY="$HTTPS_PROXY" https_proxy="$HTTPS_PROXY" http_proxy="$HTTPS_PROXY"
@@ -32,8 +35,8 @@ echo "=== 1) data: real (held-out split) + Mina's pseudo-family OOD injection (t
 $PIXI python src/generate_data.py --extra-data 5000 --ood 3000 --output-dir "$RUN" --seed 1
 
 echo "=== 2) SFT: aux category head + UNK-dropout (Mina's injections) — model learns patterns + function ==="
-OUTPUT_DIR="$RUN" $PIXI python src/train.py --arch transformer --model-size "$MODEL_SIZE" \
-    --epochs "$EPOCHS" --aux-category --unk-dropout 0.15 --device cuda
+OUTPUT_DIR="$RUN" $PIXI python -u src/train.py --arch transformer --model-size "$MODEL_SIZE" \
+    --epochs "$EPOCHS" --aux-category --unk-dropout 0.15 $NO_RF --device cuda
 
 echo "=== 3) GRPO: push the constraints into the weights (verifier reward) ==="
 OUTPUT_DIR="$RUN" $PIXI python src/train_grpo.py --init-from "$RUN/best_model.pt" \
