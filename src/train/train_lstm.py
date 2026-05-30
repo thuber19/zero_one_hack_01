@@ -193,7 +193,7 @@ def main() -> int:
 
     data_dir = Path(args.data_dir)
     tokenizer_path = Path(args.tokenizer) if args.tokenizer else data_dir.parent / "tokenizer.json"
-    splits_path = data_dir.parent / "splits.json"
+    splits_path = tokenizer_path.parent / "splits.json"
 
     # Fail-fast prerequisite checks
     if not tokenizer_path.exists():
