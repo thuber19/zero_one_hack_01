@@ -154,3 +154,53 @@ Each track expects additional outputs in the repo beyond the four submission fie
 `#{your-track}` on Discord, or find a Lumos team member at the front desk.
 
 Good luck.
+
+---
+
+## Industrial AI Track — Infineon Process-Logic Pipeline
+
+**Solution location:** `tracks/industrial-infineon/solution/`
+
+Full documentation (install, architecture, eval framing, Leonardo runbook) is in
+[`tracks/industrial-infineon/solution/README.md`](../tracks/industrial-infineon/solution/README.md).
+
+### Reproduce in one command
+
+```bash
+cd tracks/industrial-infineon/solution
+make smoke
+```
+
+This runs unit tests, generates tiny synthetic data, trains both models for 5
+steps, runs inference on all three tasks, and scores them.  Expected final line:
+`SMOKE OK`.  No GPU required; completes on a laptop CPU in ~30 seconds.
+
+### Submission CSVs
+
+After a full training run (`make data && make train-decoder && make train-encoder`)
+followed by `python -m procseq.infer --all`, the three submission files land at:
+
+```
+tracks/industrial-infineon/solution/artifacts/submission_task1.csv   # Task 1 — next-step prediction
+tracks/industrial-infineon/solution/artifacts/submission_task2.csv   # Task 2 — sequence completion
+tracks/industrial-infineon/solution/artifacts/submission_task3.csv   # Task 3 — anomaly detection
+```
+
+### Plots and dashboard
+
+| Artefact | Location |
+|----------|----------|
+| Training loss curves (PNG) | `tracks/industrial-infineon/solution/artifacts/` |
+| Per-family metric breakdown | `tracks/industrial-infineon/solution/artifacts/` |
+| Interactive Streamlit dashboard | `tracks/industrial-infineon/solution/dashboard/app.py` — run with `streamlit run dashboard/app.py` from the `solution/` directory |
+| TensorBoard logs | `tracks/industrial-infineon/solution/runs/<run_name>/` |
+
+### Track-specific checklist
+
+- [x] `nextstep.csv` → `artifacts/submission_task1.csv`
+- [x] `completion.csv` → `artifacts/submission_task2.csv`
+- [x] `anomaly.csv` → `artifacts/submission_task3.csv`
+- [x] Training artifacts: checkpoints in `artifacts/decoder_base/` and `artifacts/encoder_base/`
+- [x] Training logs and loss curves in `runs/` and `artifacts/`
+- [x] `eval_metrics.py` scores reported per-family in `artifacts/eval_results.json`
+- [x] Demo: `make demo` shows baseline vs. trained model on identical inputs

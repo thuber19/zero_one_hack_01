@@ -1,0 +1,22 @@
+# Python / venv
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Run artifacts (checkpoints, predictions, plots, tensorboard)
+artifacts/
+runs/
+logs/
+wandb/
+
+# Build orchestration scratch
+build_workflow.js
+
+# Stray MCP / tool databases that land in the cwd
+*.rvf
+*.rvf.lock
+*.db
+agentdb.*
+ruvector.db
+configs/_run_*.yaml
