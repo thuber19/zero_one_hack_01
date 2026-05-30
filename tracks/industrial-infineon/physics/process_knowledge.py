@@ -152,12 +152,13 @@ class EventClass:
     unknown_flags: tuple = ()
     unknown_union: tuple = ()
     # OOD-only AND-keyword groups: an UNKNOWN (4th-family) step matches if, for
-    # any group, ALL substrings in the group appear in the step name. Used for
-    # operations whose physical category alone is ambiguous (pad-window opening,
-    # backside metal, electrical probe) so their ordering rules still fire on
-    # renamed steps. Groups are intentionally specific to avoid false positives
-    # (e.g. ('PAD','OPEN') will NOT match 'DEPOSIT PAD OXIDE').
+    # any group, ALL words in the group appear as WHOLE WORDS in the step name
+    # (whole-word, so 'PAD' does NOT match 'PADDLE'), AND the step's physical
+    # category is in `unknown_keyword_cats` (so a measurement/clean/etch that
+    # merely shares a word is NOT mistaken for the operation). Used for ops whose
+    # category alone is ambiguous (pad-window open, backside metal, probe).
     unknown_keywords: tuple = ()
+    unknown_keyword_cats: frozenset = frozenset()
 
 
 EVENT_CLASSES: dict[str, EventClass] = {
@@ -171,7 +172,8 @@ EVENT_CLASSES: dict[str, EventClass] = {
     "METAL_ETCH": EventClass(
         "METAL_ETCH", "Patterns the metal interconnect (needs full lithography).",
         known_steps=frozenset({"METAL ETCH", "METAL ETCH DRY"}),
-        unknown_keywords=(("METAL", "ETCH"),)),
+        unknown_keywords=(("METAL", "ETCH"),),
+        unknown_keyword_cats=frozenset({"ETCH"})),
     "IMPLANT": EventClass(
         "IMPLANT", "Drives dopant ions into the substrate.",
         known_steps=_IMPLANT, unknown_categories=frozenset({CAT_IMPLANT})),
@@ -181,12 +183,15 @@ EVENT_CLASSES: dict[str, EventClass] = {
     "PAD_WINDOW_OPEN": EventClass(
         "PAD_WINDOW_OPEN", "Opens a window to the bond pads through passivation.",
         known_steps=_PADS,
-        unknown_keywords=(("PAD", "OPEN"), ("PAD", "WINDOW"), ("BOND", "PAD"))),
+        unknown_keywords=(("PAD", "OPEN"), ("PAD", "WINDOW"), ("BOND", "PAD")),
+        unknown_keyword_cats=frozenset({"ETCH", "LITHO", "DEPOSIT", "UNKNOWN"})),
     "ELECTRICAL_TEST": EventClass(
         "ELECTRICAL_TEST", "Probe-based electrical characterisation.",
         known_steps=_ETESTS,
         unknown_categories=frozenset({"TEST"}),
-        unknown_keywords=(("PROBE",),)),
+        # PROBE only counts as a test if it isn't clearly a clean/align/etc.
+        unknown_keywords=(("PROBE",),),
+        unknown_keyword_cats=frozenset({"TEST", "UNKNOWN"})),
     "SHIP": EventClass(
         "SHIP", "Releases the lot to the customer.",
         known_steps=frozenset({"SHIP LOT"}),
@@ -195,7 +200,9 @@ EVENT_CLASSES: dict[str, EventClass] = {
         "BACKSIDE_METAL", "Deposits the backside metal contact.",
         known_steps=frozenset({"DEPOSIT BACKSIDE METAL"}),
         unknown_keywords=(("BACKSIDE", "METAL"), ("REAR", "METAL"),
-                          ("BACKSIDE", "CONTACT"), ("REAR", "CONTACT"))),
+                          ("BACKSIDE", "CONTACT"), ("REAR", "CONTACT")),
+        # only the DEPOSITION of backside metal — not measuring/etching/inspecting it
+        unknown_keyword_cats=frozenset({"DEPOSIT"})),
 
     # ── Enablers (operations that satisfy a precondition) ────────────────────
     "CLEAN_SURFACE": EventClass(
@@ -228,11 +235,14 @@ def step_in_event(step: str, event_name: str) -> bool:
     if HAVE_REFERENCE and step in STEP_CATEGORY:           # KNOWN step
         return step in ec.known_steps
     # UNKNOWN (4th-family) step → physical reasoning
-    if classify_step(step) in ec.unknown_categories:
+    cat = classify_step(step)
+    if cat in ec.unknown_categories:
         return True
-    for grp in ec.unknown_keywords:
-        if all(k in up for k in grp):
-            return True
+    if ec.unknown_keywords and (not ec.unknown_keyword_cats or cat in ec.unknown_keyword_cats):
+        words = set(up.split())                      # WHOLE-word match (PAD != PADDLE)
+        for grp in ec.unknown_keywords:
+            if all(k in words for k in grp):
+                return True
     if ec.unknown_flags:
         pv = step_physics_vector(step)
         if any(pv.get(f) for f in ec.unknown_flags):
