@@ -101,14 +101,14 @@ echo "node=\$(hostname) gpu=\$(nvidia-smi --query-gpu=name --format=csv,noheader
 \$RUN python -m procseq.build_data --n-per-family ${PDATA} --seed 42
 
 if [ "${WHICH}" = "decoder" ]; then
-  \$RUN accelerate launch --num_processes 1 -m procseq.train_decoder --config "${CFG}"
+  \$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_decoder --config "${CFG}"
   \$RUN python -m procseq.infer --task 1 --config "${CFG}"
   \$RUN python -m procseq.infer --task 2 --config "${CFG}"
   \$RUN python -m procseq.run_eval --config "${CFG}"
   \$RUN python -m procseq.infer --task 1 --real --config "${CFG}"
   \$RUN python -m procseq.infer --task 2 --real --config "${CFG}"
 else
-  \$RUN accelerate launch --num_processes 1 -m procseq.train_encoder --config "${CFG}"
+  \$RUN accelerate launch --num_processes 1 --mixed_precision bf16 -m procseq.train_encoder --config "${CFG}"
   \$RUN python -m procseq.infer --task 3 --config "${CFG}"
   \$RUN python -m procseq.run_eval --config "${CFG}"
   \$RUN python -m procseq.infer --task 3 --real --config "${CFG}"
