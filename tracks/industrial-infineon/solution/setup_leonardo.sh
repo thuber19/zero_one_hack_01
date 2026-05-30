@@ -12,7 +12,7 @@ VENV="${VENV:-$HOME/procseq-venv}"
 # Need a Python >= 3.10. CINECA provides it via modules; the exact name varies —
 # if the first load fails, run `module avail python` and load the right one, or
 # reuse pixi's python ($HOME/.pixi/bin/python). pip itself needs login-node net.
-module load python/3.11.6--gcc--12.2.0 2>/dev/null \
+module load python/3.11.7 2>/dev/null \
   || module load python/3.11 2>/dev/null \
   || module load python 2>/dev/null \
   || echo "[warn] no python module loaded; falling back to system python3"
