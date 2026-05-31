@@ -1,4 +1,2 @@
 tracks/industrial-infineon/solution/checkpoints/**/*.safetensors filter=lfs diff=lfs merge=lfs -text
 tracks/industrial-infineon/solution/checkpoints/**/*.bin filter=lfs diff=lfs merge=lfs -text
-tracks/industrial-infineon/models/**/*.safetensors filter=lfs diff=lfs merge=lfs -text
-tracks/industrial-infineon/models/**/*.bin filter=lfs diff=lfs merge=lfs -text

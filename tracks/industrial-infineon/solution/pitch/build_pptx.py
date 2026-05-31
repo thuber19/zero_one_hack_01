@@ -300,7 +300,7 @@ para(tf, [("It works — and we can ", {"color": TEXT}), ("prove it learned", {"
 rows = [
     ("Task", "Headline", "Also"),
     ("1 · Next-step", "Top-1 0.937  ·  Top-5 1.000", "MRR 0.97  (hybrid)"),
-    ("2 · Completion", "Block-level 0.94  ·  100% rule-valid", "token 0.71 · exact 0.28"),
+    ("2 · Completion", "Block 0.94  ·  100% rule-valid", "token 0.71 · exact 0.28 · cat-tok 0.83"),
     ("3 · Anomaly", "F1 1.000  ·  rule-attr 0.972", "encoder alone AUC 0.49 (honest)"),
     ("Understanding", "0.998 next-operation acc", "learns function, not just names"),
 ]
@@ -334,8 +334,8 @@ _, tf = textbox(s, 0.9, 5.45, 11.6, 0.55)
 para(tf, [("learns ", {}), ("function", {"color": ACCENT2, "bold": True}),
           (", not just names: predicts the right ", {}),
           ("operation 99.8% of the time", {"color": ACCENT2, "bold": True}),
-          ("   ·   completions are 100% rule-valid", {})],
-     size=13, color=MUTED, font=MONO, first=True)
+          ("   ·   100% rule-valid   ·   per-family T1: IGBT .955 / MOSFET .945 / IC .910", {})],
+     size=12, color=MUTED, font=MONO, first=True)
 _, tf = textbox(s, 0.9, 6.15, 11.6, 1.0)
 para(tf, [("Honest provenance: ", {"color": MUTED, "bold": True}),
           ("real numbers from the organizer's official scorer on a held-out self-eval split, "

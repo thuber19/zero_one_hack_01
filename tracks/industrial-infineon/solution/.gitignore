@@ -12,6 +12,8 @@ artifacts/*
 !artifacts/anomaly.csv
 !artifacts/metrics.json
 !artifacts/metrics_hybrid.json
+!artifacts/metrics_per_family.json
+!artifacts/per_family_scores.txt
 !artifacts/raw/
 !artifacts/tb_logs/
 runs/
