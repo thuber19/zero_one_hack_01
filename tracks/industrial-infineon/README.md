@@ -44,21 +44,28 @@ Two from-scratch neural models wrapped in a physics verification layer:
 - **Encoder** (DeBERTa-style): Anomaly detection (Task 3) with contrastive learning
 - **Physics refinery**: Rule engine that guarantees every emitted route is physically valid ("model proposes, physics disposes")
 
-## Results (self-eval on held-out data)
+## Results (official scorer, held-out self-eval — run `procseq_base_d20000_s16001_seed11101`)
+
+Source of truth: [`solution/artifacts/metrics.json`](solution/artifacts/metrics.json)
+(decoder/encoder alone) + [`solution/artifacts/metrics_hybrid.json`](solution/artifacts/metrics_hybrid.json)
+(submitted hybrid). Full breakdown + honesty notes in the root [`REPORT.md`](../../REPORT.md).
 
 | Task | Metric | Score |
 |---|---|---|
-| **1. Next-step** | Top-1 Accuracy | **81.3%** |
-| | Top-3 Accuracy | 99.7% |
-| | Top-5 Accuracy | 100% |
-| | MRR | 0.904 |
-| **2. Completion** | Exact Match | 18.7% |
-| | Token Accuracy | 62.6% |
-| | Block-level Accuracy | 92.6% |
-| | Logic Validity | 100% |
-| **3. Anomaly** | Binary Accuracy | 63.4% |
-| | Precision | 55.9% |
-| | ROC-AUC | 0.625 |
+| **1. Next-step** (hybrid) | Top-1 Accuracy | **93.7%** |
+| | Top-3 / Top-5 | 100% / 100% |
+| | MRR | 0.968 |
+| | Next-operation (category) | **99.8%** |
+| **2. Completion** | Block-level Accuracy | **93.7%** |
+| | Logic Validity (rule-valid) | **100%** |
+| | Token Accuracy | 70.8% |
+| | Exact Match | 28.3% |
+| **3. Anomaly** (physics hybrid) | F1 | **1.00** |
+| | Rule attribution | **0.97** |
+| | *Learned encoder alone* | *F1 0.0, AUC 0.49 (≈ chance — honest)* |
+
+> Task 3's verdict is the deterministic rule engine (exact in-distribution by
+> construction); the learned encoder alone is ≈ chance — we report both. See `REPORT.md`.
 
 ## Training on Leonardo
 
