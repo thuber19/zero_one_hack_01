@@ -1,5 +1,29 @@
 # Zero One Hack_01
 
+> ## 🏁 Team **TBD** — Industrial AI (Infineon) submission
+> *Tobias Huber · Mina Mikail · Khaled El Yamany · Fathy Shalaby*
+>
+> **What:** **procseq** — two from-scratch neural models (Llama-style decoder for
+> next-step/completion, DeBERTa-style encoder for anomaly) that *learn* semiconductor
+> process logic, wrapped in a physics verification layer (*model proposes, physics disposes*).
+>
+> **Read first:** [`REPORT.md`](REPORT.md) (full write-up + results) ·
+> submission code in [`tracks/industrial-infineon/solution/`](tracks/industrial-infineon/solution/) ·
+> deliverable CSVs + scores in [`tracks/industrial-infineon/solution/artifacts/`](tracks/industrial-infineon/solution/artifacts/).
+>
+> **Run it:**
+> ```bash
+> pip install -r requirements.txt
+> cd tracks/industrial-infineon/solution
+> make smoke                                              # CPU ~30s sanity check
+> python -m procseq.run_all --config configs/leonardo_decoder.yaml   # full pipeline (GPU)
+> ```
+> Headline results (held-out self-eval): next-step **Top-1 0.77 / Top-5 1.00**
+> (category 0.96); completion **block-acc 0.92, 100% rule-valid**; anomaly via
+> physics hybrid. See `REPORT.md` for the honest breakdown.
+
+---
+
 **36 hours. Real infrastructure. European AI sovereignty.**
 
 Welcome to the central repository for Zero One Hack_01, hosted by [Lumos Consulting](https://lumos-consulting.at) at [AI Factory Austria](https://aifactory.at) in Vienna, with compute provided by CINECA on the Leonardo GPU Cluster.

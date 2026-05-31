@@ -190,9 +190,9 @@ make smoke          # runs the whole pipeline tiny → proves it connects
 
 - The smoke numbers are bad **on purpose** (5-step untrained toy models). Real numbers
   come from the Leonardo run.
-- For raw score, the team's physics/rule pipeline likely beats procseq on tasks 2 & 3
-  (rules guarantee validity). procseq's value is the **learned + honest-evaluation +
-  OOD** story. See `../PIPELINES.md` for how the two fit together.
+- procseq **is the submission**; the physics rule engine is its **verification companion**
+  (procseq imports it for guaranteed-valid Task-2 completions and the Task-3 hybrid verdict).
+  procseq's value is the **learned + honest-evaluation + OOD** story.
 - Canonicalization is off by default (the grader scores exact step names).
 
 ---
@@ -302,9 +302,9 @@ You each optimized for a different goal, and both are valid:
   understood it" story — and judges explicitly reward honest evaluation.
 
 That's why the two are **complementary, not rivals**: his guarantees correctness, yours
-demonstrates learning. The strongest submission uses **his** rule-guaranteed outputs
-where they win on score, and **your** results to prove the models genuinely learned the
-logic and generalize. (See `../PIPELINES.md`.)
+demonstrates learning. procseq submits the learned models, and the physics rule engine
+guarantees validity where it matters (Task-2 completions, Task-3 verdict) — together
+proving the models genuinely learned the logic. See the root `REPORT.md` for results.
 
 ---
 

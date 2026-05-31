@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ProcSeq — Process Logic, Learned · Zero-One Hack 2026 (Infineon)</title>
+<style>
+  :root{
+    --bg:#0B1220; --bg2:#0E1626; --surface:#131C2E; --surface2:#18233A;
+    --text:#E8EDF5; --muted:#9FB0C8; --faint:#6B7C99;
+    --accent:#EC0016; --accent2:#FF5A45; --ok:#37D67A; --warn:#F2C14E;
+    --line:#243450;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  /* deck = vertical scroll-snap of full-viewport slides */
+  .deck{scroll-snap-type:y mandatory; height:100vh; overflow-y:scroll; scroll-behavior:smooth}
+  .slide{
+    scroll-snap-align:start; position:relative;
+    min-height:100vh; width:100%;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:6.5vh 8vw 7vh; overflow:hidden;
+    background:
+      radial-gradient(1200px 700px at 82% -12%, rgba(236,0,22,.10), transparent 60%),
+      radial-gradient(900px 600px at -8% 110%, rgba(54,120,255,.08), transparent 55%),
+      var(--bg);
+  }
+  /* faint circuit/dot grid */
+  .slide::before{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:46px 46px; background-position:center;
+    -webkit-mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 78%);
+            mask-image:radial-gradient(circle at 50% 40%,#000 0%,transparent 78%);
+    opacity:.18;
+  }
+  .slide > *{position:relative; z-index:1}
+
+  .kicker{
+    font-family:var(--mono); font-size:.82rem; letter-spacing:.22em; text-transform:uppercase;
+    color:var(--accent2); display:flex; align-items:center; gap:.7rem; margin-bottom:1.4rem;
+  }
+  .kicker::before{content:""; width:34px; height:3px; background:var(--accent); border-radius:2px}
+  h1{font-size:clamp(2.4rem,6.4vw,5.2rem); line-height:1.02; letter-spacing:-.02em; font-weight:800}
+  h2{font-size:clamp(1.9rem,4.4vw,3.3rem); line-height:1.06; letter-spacing:-.015em; font-weight:800; margin-bottom:1.6rem}
+  .lead{font-size:clamp(1.05rem,2vw,1.5rem); color:var(--muted); max-width:54ch; line-height:1.5}
+  .accent{color:var(--accent2)}
+  .mono{font-family:var(--mono)}
+  strong{color:var(--text)}
+
+  /* TITLE */
+  .title-wrap h1{margin-bottom:1.3rem}
+  .title-sub{font-size:clamp(1.1rem,2.3vw,1.7rem); color:var(--muted); max-width:46ch; line-height:1.45}
+  .title-meta{
+    margin-top:3.2rem; display:flex; flex-wrap:wrap; gap:.7rem 1.1rem; align-items:center;
+    font-family:var(--mono); font-size:.92rem; color:var(--faint);
+  }
+  .pill{
+    border:1px solid var(--line); border-radius:999px; padding:.42rem .9rem; color:var(--muted);
+    background:rgba(255,255,255,.02);
+  }
+  .pill.red{border-color:rgba(236,0,22,.5); color:#ffb3ad; background:rgba(236,0,22,.08)}
+  .team{margin-top:2.4rem; font-size:1rem; color:var(--muted)}
+  .team b{color:var(--text)}
+  .team .names{font-family:var(--mono); color:var(--faint); font-size:.9rem; margin-top:.35rem}
+
+  /* generic grid of cards */
+  .cards{display:grid; gap:1rem; margin-top:.4rem}
+  .c2{grid-template-columns:repeat(2,1fr)}
+  .c3{grid-template-columns:repeat(3,1fr)}
+  .card{
+    background:linear-gradient(180deg,var(--surface),var(--bg2));
+    border:1px solid var(--line); border-radius:16px; padding:1.4rem 1.45rem;
+  }
+  .card h3{font-size:1.12rem; margin-bottom:.5rem; display:flex; align-items:center; gap:.55rem}
+  .card p{color:var(--muted); font-size:1rem; line-height:1.5}
+  .tag{font-family:var(--mono); font-size:.72rem; color:var(--accent2); border:1px solid rgba(236,0,22,.45);
+       padding:.12rem .5rem; border-radius:6px}
+  .num{font-family:var(--mono); color:var(--accent2); font-weight:700}
+
+  ul.clean{list-style:none; display:flex; flex-direction:column; gap:.85rem; margin-top:.4rem}
+  ul.clean li{display:flex; gap:.8rem; font-size:1.12rem; color:var(--muted); line-height:1.45; max-width:62ch}
+  ul.clean li::before{content:"▸"; color:var(--accent); font-family:var(--mono); margin-top:.05rem}
+  ul.clean li b{color:var(--text)}
+
+  /* hybrid diagram */
+  .flow{display:flex; align-items:stretch; gap:1rem; margin-top:1.6rem; flex-wrap:wrap}
+  .flowbox{
+    flex:1 1 220px; background:linear-gradient(180deg,var(--surface),var(--bg2));
+    border:1px solid var(--line); border-radius:16px; padding:1.25rem 1.3rem;
+  }
+  .flowbox.neural{border-color:rgba(54,120,255,.4)}
+  .flowbox.phys{border-color:rgba(236,0,22,.5)}
+  .flowbox .lbl{font-family:var(--mono); font-size:.74rem; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); margin-bottom:.6rem}
+  .flowbox h3{font-size:1.15rem; margin-bottom:.5rem}
+  .flowbox p{color:var(--muted); font-size:.95rem; line-height:1.45}
+  .arrow{display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:1.6rem; font-family:var(--mono)}
+  @media(max-width:820px){.arrow{transform:rotate(90deg)}}
+  .principle{
+    margin-top:1.7rem; font-family:var(--mono); font-size:clamp(1rem,2.1vw,1.45rem);
+    color:var(--text); letter-spacing:.01em;
+  }
+  .principle .q{color:var(--accent2)}
+
+  /* results table */
+  table.res{width:100%; border-collapse:collapse; margin-top:.6rem; font-size:1.02rem}
+  table.res th,table.res td{text-align:left; padding:.72rem .9rem; border-bottom:1px solid var(--line)}
+  table.res thead th{font-family:var(--mono); font-size:.74rem; letter-spacing:.13em; text-transform:uppercase; color:var(--faint)}
+  table.res td.metric{font-family:var(--mono); color:var(--muted)}
+  table.res td .big{font-family:var(--mono); font-size:1.18rem; color:var(--accent2); font-weight:700}
+  table.res tr td:first-child{color:var(--text); font-weight:600}
+  .foot{margin-top:1.2rem; font-size:.84rem; color:var(--faint); max-width:78ch; line-height:1.45}
+  .foot b{color:var(--muted)}
+
+  .metricrow{display:flex; flex-wrap:wrap; gap:.7rem; margin-top:1.5rem}
+  .chip{font-family:var(--mono); border:1px solid var(--line); background:rgba(255,255,255,.02);
+        border-radius:10px; padding:.6rem .85rem; font-size:.95rem; color:var(--muted)}
+  .chip b{color:var(--accent2)}
+
+  .close-quote{font-size:clamp(1.5rem,3.6vw,2.7rem); font-weight:800; line-height:1.15; letter-spacing:-.01em; max-width:24ch; margin-bottom:1.6rem}
+  .close-quote .accent{color:var(--accent2)}
+
+  /* chrome: progress + counter + hint */
+  .progress{position:fixed; top:0; left:0; height:3px; background:var(--accent); width:0; z-index:50; transition:width .2s}
+  .counter{position:fixed; right:18px; bottom:14px; font-family:var(--mono); font-size:.8rem; color:var(--faint); z-index:50}
+  .counter b{color:var(--text)}
+  .brand{position:fixed; left:20px; bottom:14px; font-family:var(--mono); font-size:.78rem; color:var(--faint); z-index:50; letter-spacing:.12em}
+  .brand .dot{color:var(--accent)}
+  .hint{position:fixed; right:18px; top:14px; font-family:var(--mono); font-size:.74rem; color:var(--faint); z-index:50; opacity:.8}
+
+  @media print{
+    @page{size:1280px 720px; margin:0}
+    .deck{height:auto; overflow:visible; scroll-snap-type:none}
+    .slide{height:720px; min-height:720px; width:1280px; page-break-after:always; break-after:page}
+    .slide::before{opacity:.16}
+    .progress,.counter,.brand,.hint{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="hint">↑ ↓ / Space to navigate</div>
+<div class="brand"><span class="dot">●</span> PROCSEQ</div>
+<div class="counter"><b id="cur">1</b> / 7</div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 · TITLE -->
+  <section class="slide title-wrap">
+    <div class="kicker">Zero-One Hack 2026 · Infineon · Industrial AI</div>
+    <h1>Process Logic,<br><span class="accent">Learned.</span></h1>
+    <p class="title-sub">A hybrid neural–symbolic pipeline that learns the hidden grammar of semiconductor manufacturing — and proves it.</p>
+    <div class="title-meta">
+      <span class="pill red">Next-step</span>
+      <span class="pill red">Completion</span>
+      <span class="pill red">Anomaly detection</span>
+      <span class="pill">+ hidden 4th-family OOD</span>
+    </div>
+    <div class="team">
+      <b>Team ProcSeq</b>
+      <div class="names">Fathy Shalaby · Mina Mikail · Khaled Elyamany &nbsp;·&nbsp; <span style="opacity:.7">edit names in HTML / PPTX</span></div>
+    </div>
+  </section>
+
+  <!-- 2 · PROBLEM -->
+  <section class="slide">
+    <div class="kicker">The problem</div>
+    <h2>A chip is a <span class="accent">150-step sentence</span> where order is physics.</h2>
+    <ul class="clean">
+      <li>Every wafer runs an ordered route: <b>clean → oxidize → pattern → etch → implant → … → test → ship</b> (~115–150 steps, 3 product families).</li>
+      <li>The order encodes real constraints: <b>no etch before a mask</b>, <b>no deposit on a dirty surface</b>, <b>no ship before sort-test</b> — <b>10 long-range rules</b>, some spanning 15 steps.</li>
+      <li>The judges' real question isn't accuracy — it's: <b>does the model learn the process <span class="accent">logic</span>, or just memorize patterns?</b></li>
+      <li>And it's graded on a <b>hidden 4th family</b> never seen in training.</li>
+    </ul>
+  </section>
+
+  <!-- 3 · INSIGHT -->
+  <section class="slide">
+    <div class="kicker">The insight</div>
+    <h2>Treat a recipe like a <span class="accent">sentence</span>. One step = one word.</h2>
+    <div class="cards c3">
+      <div class="card">
+        <h3><span class="tag">TOKENIZER</span></h3>
+        <p>A custom <b>atomic-step tokenizer</b> — each whole step is one token (vocab <span class="num">210</span>). No sub-word fragmentation; recipes read and write like language.</p>
+      </div>
+      <div class="card">
+        <h3>The Writer <span class="tag">DECODER</span></h3>
+        <p>A from-scratch <b>Llama-style causal Transformer</b> that <b>generates</b> — next step &amp; completion (Tasks 1–2). Attention does long-range lookups an LSTM can't.</p>
+      </div>
+      <div class="card">
+        <h3>The Judge <span class="tag">ENCODER</span></h3>
+        <p>A from-scratch <b>DeBERTa-v2 encoder</b> that <b>classifies</b> validity + which rule broke (Task 3), trained with <b>contrastive hard-negative twins</b>.</p>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:1.5rem">Two specialized Transformers, trained from scratch — no pretrained internet model, full control of the vocabulary, interpretable representations.</p>
+  </section>
+
+  <!-- 4 · HYBRID -->
+  <section class="slide">
+    <div class="kicker">Our approach · the hybrid</div>
+    <h2>The model proposes. <span class="accent">Physics disposes.</span></h2>
+    <div class="flow">
+      <div class="flowbox neural">
+        <div class="lbl">Neural — plausibility</div>
+        <h3>Decoder + Encoder</h3>
+        <p>Learn the grammar from data. Rank likely next steps, generate fluent completions, and output a real <b>probability</b> of validity.</p>
+      </div>
+      <div class="arrow">➜</div>
+      <div class="flowbox phys">
+        <div class="lbl">Symbolic — correctness</div>
+        <h3>Physics Refinery</h3>
+        <p>A deterministic <b>rule engine</b> (≡ the official validator). Vetoes illegal steps, repairs dead-ends, certifies the verdict.</p>
+      </div>
+      <div class="arrow">➜</div>
+      <div class="flowbox">
+        <div class="lbl">Output</div>
+        <h3>Best of both</h3>
+        <p><b>Guaranteed-valid</b> routes that are also <b>likely</b> — "the model decided, the rules certify it."</p>
+      </div>
+    </div>
+    <p class="principle">Neural alone can be <span class="q">confidently wrong</span>; rules alone can't say what's <span class="q">likely</span>. The hybrid covers both blind spots.</p>
+  </section>
+
+  <!-- 5 · THE 3 TASKS -->
+  <section class="slide">
+    <div class="kicker">How we tackled the 3 tasks</div>
+    <h2>One hybrid, wired <span class="accent">three ways</span>.</h2>
+    <div class="cards c3">
+      <div class="card">
+        <h3><span class="num">1</span>&nbsp; Next-step</h3>
+        <p>Decoder's <b>top-5</b> candidates, then the Refinery floats the <b>legal</b> ones to the top. Cannot hurt a good model; rescues a bad rank.</p>
+      </div>
+      <div class="card">
+        <h3><span class="num">2</span>&nbsp; Completion</h3>
+        <p>Decoder proposes; <b>rule-vetoed beam search + repair</b> (beam 5, branch 8). Every emitted suffix is <b>provably valid</b>.</p>
+      </div>
+      <div class="card">
+        <h3><span class="num">3</span>&nbsp; Anomaly</h3>
+        <p>Contrastive encoder learns <b>why</b> a route is invalid; rule engine gives the <b>verdict</b>, the model gives the <b>graded score</b> (real ROC-AUC).</p>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:1.5rem">Generative tasks use the writer; the discriminative task uses the judge — each with a guarantee the learned model can't make alone.</p>
+  </section>
+
+  <!-- 6 · RESULTS -->
+  <section class="slide">
+    <div class="kicker">Results · official scorer, held-out split</div>
+    <h2>It works — and we can <span class="accent">prove it learned</span>.</h2>
+    <table class="res">
+      <thead><tr><th>Task</th><th>Headline</th><th>Also</th></tr></thead>
+      <tbody>
+        <tr><td>1 · Next-step</td><td><span class="big">Top-5 1.000</span> · Top-1 0.690</td><td class="metric">MRR 0.84</td></tr>
+        <tr><td>2 · Completion</td><td><span class="big">NED 0.226</span> <span class="metric">(lower = better)</span></td><td class="metric">Block-level 0.69</td></tr>
+        <tr><td>3 · Anomaly</td><td><span class="big">F1 1.000</span> · ROC-AUC 1.000</td><td class="metric">rule engine, in-dist.</td></tr>
+        <tr><td>Understanding</td><td><span class="big">0.944</span> category acc (ID)</td><td class="metric">0.37–0.41 OOD vs 0.15 lexical</td></tr>
+      </tbody>
+    </table>
+    <div class="metricrow">
+      <span class="chip">learned <b>function</b>, not names: category ≫ lexical OOD</span>
+      <span class="chip">transfers to unseen families at <b>6–7×</b> random</span>
+    </div>
+    <p class="foot"><b>Honest provenance:</b> numbers above are real, from the organizer's official scorer on a disjoint held-out split (companion physics pipeline). The full from-scratch ProcSeq run on Leonardo (4×A100) is the next step; we report what is measured and mark what is pending.</p>
+  </section>
+
+  <!-- 7 · WHY US / CLOSE -->
+  <section class="slide">
+    <div class="kicker">Why this submission</div>
+    <div class="close-quote">We measured <span class="accent">whether the model learned</span> — not just that it scored.</div>
+    <div class="cards c3">
+      <div class="card">
+        <h3>Honest evaluation</h3>
+        <p>Every number sits between an <b>n-gram floor</b> and a <b>rule-oracle ceiling</b>, plus a logic probe &amp; a <b>novel-vocabulary OOD</b> stress test we built to make it fail.</p>
+      </div>
+      <div class="card">
+        <h3>Hybrid &amp; robust</h3>
+        <p>Learned plausibility + symbolic guarantees → <b>0 illegal</b> outputs, a calibratable anomaly score, and a graceful OOD story.</p>
+      </div>
+      <div class="card">
+        <h3>Reproducible</h3>
+        <p><span class="mono">make smoke</span> in &lt;1 min; one command trains the full pipeline on <b>Leonardo</b>. 29 tests, fixed seeds, open stack.</p>
+      </div>
+    </div>
+    <p class="lead" style="margin-top:1.6rem"><b style="color:var(--text)">ProcSeq</b> — process logic, learned, guaranteed, and honestly benchmarked. <span class="accent">Thank you.</span></p>
+  </section>
+
+</div>
+
+<script>
+  const deck=document.getElementById('deck');
+  const slides=[...document.querySelectorAll('.slide')];
+  const cur=document.getElementById('cur');
+  const prog=document.getElementById('progress');
+  function update(){
+    const i=Math.round(deck.scrollTop/window.innerHeight);
+    cur.textContent=Math.min(slides.length,i+1);
+    prog.style.width=((deck.scrollTop/(deck.scrollHeight-window.innerHeight))*100||0)+'%';
+  }
+  deck.addEventListener('scroll',update,{passive:true});
+  function go(d){
+    const i=Math.round(deck.scrollTop/window.innerHeight);
+    const n=Math.max(0,Math.min(slides.length-1,i+d));
+    deck.scrollTo({top:n*window.innerHeight,behavior:'smooth'});
+  }
+  window.addEventListener('keydown',e=>{
+    if(['ArrowDown','ArrowRight','PageDown',' '].includes(e.key)){e.preventDefault();go(1);}
+    else if(['ArrowUp','ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();go(-1);}
+    else if(e.key==='Home'){deck.scrollTo({top:0,behavior:'smooth'});}
+    else if(e.key==='End'){deck.scrollTo({top:slides.length*window.innerHeight,behavior:'smooth'});}
+  });
+  update();
+</script>
+</body>
+</html>

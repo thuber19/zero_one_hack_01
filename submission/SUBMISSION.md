@@ -175,32 +175,34 @@ This runs unit tests, generates tiny synthetic data, trains both models for 5
 steps, runs inference on all three tasks, and scores them.  Expected final line:
 `SMOKE OK`.  No GPU required; completes on a laptop CPU in ~30 seconds.
 
-### Submission CSVs
+### Submission CSVs (committed — from the `procseq_base_d20000_s16000` run)
 
-After a full training run (`make data && make train-decoder && make train-encoder`)
-followed by `python -m procseq.infer --all`, the three submission files land at:
+The three submission files (predictions on the organizer eval inputs, best variant
+per task) are committed at:
 
 ```
-tracks/industrial-infineon/solution/artifacts/submission_task1.csv   # Task 1 — next-step prediction
-tracks/industrial-infineon/solution/artifacts/submission_task2.csv   # Task 2 — sequence completion
-tracks/industrial-infineon/solution/artifacts/submission_task3.csv   # Task 3 — anomaly detection
+tracks/industrial-infineon/solution/artifacts/nextstep.csv     # Task 1 — next-step (decoder, legal-first reranked)
+tracks/industrial-infineon/solution/artifacts/completion.csv   # Task 2 — completion (physics beam+repair, 100% valid)
+tracks/industrial-infineon/solution/artifacts/anomaly.csv      # Task 3 — anomaly (physics hybrid: rule verdict + learned score)
 ```
 
-### Plots and dashboard
+All per-task variants (self-eval + `_real`, pure vs. hybrid) are in `artifacts/raw/`.
+
+### Plots, logs, dashboard
 
 | Artefact | Location |
 |----------|----------|
-| Training loss curves (PNG) | `tracks/industrial-infineon/solution/artifacts/` |
-| Per-family metric breakdown | `tracks/industrial-infineon/solution/artifacts/` |
-| Interactive Streamlit dashboard | `tracks/industrial-infineon/solution/dashboard/app.py` — run with `streamlit run dashboard/app.py` from the `solution/` directory |
-| TensorBoard logs | `tracks/industrial-infineon/solution/runs/<run_name>/` |
+| Eval scores (all 3 tasks) | `tracks/industrial-infineon/solution/artifacts/metrics.json` |
+| Training logs / loss curves | `tracks/industrial-infineon/solution/artifacts/tb_logs/{decoder,encoder}/` — `tensorboard --logdir artifacts/tb_logs` |
+| Interactive Streamlit dashboard | `tracks/industrial-infineon/solution/dashboard/app.py` — `streamlit run dashboard/app.py` from `solution/` |
+| Checkpoints (~210 MB) | exceed GitHub's 100 MB limit — **not committed**; reproduce with `python -m procseq.run_all --config configs/leonardo_decoder.yaml` |
 
 ### Track-specific checklist
 
-- [x] `nextstep.csv` → `artifacts/submission_task1.csv`
-- [x] `completion.csv` → `artifacts/submission_task2.csv`
-- [x] `anomaly.csv` → `artifacts/submission_task3.csv`
-- [x] Training artifacts: checkpoints in `artifacts/decoder_base/` and `artifacts/encoder_base/`
-- [x] Training logs and loss curves in `runs/` and `artifacts/`
-- [x] `eval_metrics.py` scores reported per-family in `artifacts/eval_results.json`
-- [x] Demo: `make demo` shows baseline vs. trained model on identical inputs
+- [x] `nextstep.csv` → `artifacts/nextstep.csv` (600 rows)
+- [x] `completion.csv` → `artifacts/completion.csv` (600 rows)
+- [x] `anomaly.csv` → `artifacts/anomaly.csv` (987 rows)
+- [~] Training artifacts: checkpoints ~210 MB > GitHub 100 MB limit → reproduced via `run_all` (not committed raw); logs committed
+- [x] Training logs and loss curves in `artifacts/tb_logs/`
+- [x] `eval_metrics.py` scores in `artifacts/metrics.json` (aggregate; per-family breakdown is a known gap — see REPORT)
+- [ ] Demo video (≤2 min): **pending** — shows baseline vs. hybrid on identical inputs
