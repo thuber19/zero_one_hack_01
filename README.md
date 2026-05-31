@@ -11,13 +11,15 @@
 > submission code in [`tracks/industrial-infineon/solution/`](tracks/industrial-infineon/solution/) ·
 > deliverable CSVs + scores in [`tracks/industrial-infineon/solution/artifacts/`](tracks/industrial-infineon/solution/artifacts/).
 >
-> **Run it:**
+> **Run it (reproduce submissions):**
 > ```bash
 > pip install -r requirements.txt
-> cd tracks/industrial-infineon/solution
-> make smoke                                              # CPU ~30s sanity check
-> python -m procseq.run_all --config configs/leonardo_decoder.yaml   # full pipeline (GPU)
+> cd tracks/industrial-infineon
+> bash download_models.sh                                            # download weights from Dropbox (~110MB)
+> cd solution
+> PYTHONPATH=$PWD python3 -m procseq.run_all --config configs/inference.yaml --skip-train
 > ```
+> Output: `submissions/nextstep.csv`, `submissions/completion.csv`, `submissions/anomaly.csv`
 > Headline results (held-out self-eval): next-step **Top-1 0.94 / Top-5 1.00**
 > (category **1.00**); completion **block-acc 0.94, 100% rule-valid**; anomaly via
 > physics hybrid (**F1 1.0, rule-attribution 0.97**). See `REPORT.md` for the honest breakdown.
