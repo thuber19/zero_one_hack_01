@@ -1,14 +1,17 @@
-# Two pipelines, one track — comparison & how we finalize into one
+# The submission is procseq — physics is its verification companion
 
-We currently have **two working pipelines** for the Infineon process-logic track,
-both submittable, both producing the same 3 CSVs (`next-step`, `completion`,
-`anomaly`). This doc explains each, where they differ, and the plan to converge
-on a single submission.
+> **DECISION (final).** The **submission is Pipeline B — `solution/procseq`** (two
+> from-scratch neural models that *learn* the process logic). **Pipeline A —
+> `src/` + `physics/`** is kept only as the **verification companion**: procseq
+> *imports* its rule engine + refinery (`physics.ontology`, `refinery.PhysicsRefinery`)
+> for the Task-2/3 hybrids, and its deterministic checker is the honest yardstick
+> we measure the learned models against. A is **not** submitted on its own.
 
-- **Pipeline A — "physics" (the team's, `src/` + `physics/`)** — *model proposes, physics disposes.*
-- **Pipeline B — "procseq" (Claude's, `solution/procseq/`)** — *two specialized neural models that learn the logic.*
+This doc compares the two and records why procseq is the deliverable. Both run on
+Leonardo via pixi (procseq: `-e procseq` env), both on `torch==2.3.1` (CUDA 12).
 
-Both run on Leonardo via pixi (A: default env, B: `procseq` env), both on `torch==2.3.1` (CUDA 12).
+- **Pipeline B — "procseq" (`solution/procseq/`) — THE SUBMISSION** — two specialized neural models that learn the logic.
+- **Pipeline A — "physics" (`src/` + `physics/`) — verification companion** — *model proposes, physics disposes*; its rule engine is the yardstick + the symbolic safety net procseq reuses.
 
 ---
 
@@ -70,22 +73,20 @@ Both run on Leonardo via pixi (A: default env, B: `procseq` env), both on `torch
 
 ## 4. The decision: how we finalize into one
 
-The two are **complementary, not competing**. Recommended convergence:
+**procseq (B) is the submission; physics (A) is the verification companion.** The
+two are complementary, and procseq deliberately *reuses* A's symbolic layer rather
+than competing with it:
 
-> **Submit Pipeline A as the primary scoring pipeline, and keep Pipeline B as the
-> "learned-models + honest-evaluation" companion — then submit the best CSV per task.**
-
-Concretely, the **single final submission** = best-of-both, per task:
-
-| Task | Use for submission | Why |
+| Task | What procseq submits | How physics (companion) is used |
 |---|---|---|
-| **1 — next-step** | whichever model scores higher on `data/eval_metrics.py` (A's transformer+RF+rerank vs B's decoder) — **run both, pick the winner** | both are transformers; decide by measured Top-1/MRR |
-| **2 — completion** | **A** (physics beam + repair) | guaranteed-valid + lower edit distance is very hard to beat |
-| **3 — anomaly** | **A** (rule engine) as primary; report **B** (DeBERTa+contrastive) as the *learned* result + OOD hedge | rules ≈ grader in-distribution; B carries the honesty/OOD story |
+| **1 — next-step** | procseq **decoder** top-5 (`infer_hybrid`: legal-first rerank) | A's `refinery.rerank` vetoes illegal candidates |
+| **2 — completion** | procseq **decoder** + **physics beam-decode + repair** (`infer_hybrid`) → *guaranteed rule-valid* | A's `refinery.beam_decode` is the safety net procseq drives |
+| **3 — anomaly** | procseq **encoder** (DeBERTa + contrastive) gives the *learned* verdict + continuous score (`infer_anomaly_hybrid`); rule engine supplies the exact label/attribution | A's rule engine = the verdict procseq's score is calibrated against + the honesty yardstick |
 
-And in the **write-up / slides**, B provides the comparison that makes the submission
-credible: "the rule engine guarantees validity; our learned models reach X% of that
-*without* the rules, and generalize to the hidden family at Y% (category-level Z%)."
+In the **write-up / slides**, physics provides the credibility yardstick:
+"the rule engine guarantees validity; our **learned** models reach X% of that
+*without* relying on the rules, and generalize to the hidden 4th family at Y%
+(category-level Z%)." The submitted artifact is procseq; physics proves it honest.
 
 ### Alternative (if we want ONE codebase, not two)
 Merge B's two learned models *into* A as additional backends behind the same
