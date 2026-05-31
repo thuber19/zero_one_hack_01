@@ -129,9 +129,12 @@ def main(argv=None):
     try:
         from procseq import infer_hybrid, infer_anomaly_hybrid
         print("\n===== HYBRID (tasks 1+3 only, skipping task 2 beam-decode) =====", flush=True)
-        infer_hybrid.run_hybrid_task1_only(cfg)
-        infer_anomaly_hybrid.run(cfg)
+        if not a.skip_train:
+            # self-eval hybrid (only when we built data)
+            infer_hybrid.run_hybrid_task1_only(cfg)
+            infer_anomaly_hybrid.run(cfg)
         if not a.no_real:
+            # real hybrid (always)
             infer_hybrid.run_hybrid_task1_only(cfg, real=True)
             infer_anomaly_hybrid.run(cfg, real=True)
     except Exception as e:
