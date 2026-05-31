@@ -5,7 +5,7 @@
 - **Fathy Shalaby** — neural pipeline (procseq): from-scratch decoder + encoder, training on Leonardo
 - **Mina Mikail** — physics / verification layer, hybrid inference, evaluation harness
 - **Tobias Huber** — data pipeline, infrastructure & Leonardo orchestration
-- **Khaled El Yamany** — data preparation & evaluation support
+- **Khaled El Yamany** — interactive dashboard, results visualization, and demo
 
 **Track:** Industrial AI (Infineon) — process-sequence learning & benchmarking
 **Team name:** TBD

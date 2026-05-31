@@ -301,7 +301,7 @@ rows = [
     ("Task", "Headline", "Also"),
     ("1 · Next-step", "Top-5 1.000  ·  Top-1 0.772", "MRR 0.88"),
     ("2 · Completion", "Block-level 0.92  ·  100% rule-valid", "token 0.57 · exact 0.14"),
-    ("3 · Anomaly", "Hybrid verdict — exact in-dist", "encoder alone AUC 0.61 (honest)"),
+    ("3 · Anomaly", "Binary acc 1.000  (hybrid)", "encoder alone AUC 0.61 (honest)"),
     ("Understanding", "0.963 next-operation acc", "learns function, not just names"),
 ]
 gt = s.shapes.add_table(len(rows), 3, Inches(0.9), Inches(2.7),
