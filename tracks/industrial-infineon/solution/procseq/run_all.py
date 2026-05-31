@@ -91,29 +91,30 @@ def main(argv=None):
     art = cfg.get("artifacts", "artifacts")
     t0 = time.time()
 
-    # 1) shared data + tokenizer (built ONCE here so concurrent trainers don't race)
-    print("===== BUILD DATA =====", flush=True)
-    from procseq import build_data
-    n = cfg.get("decoder", {}).get("data_per_family", 5000)
-    build_data.run(n_per_family=n, seed=cfg.get("seed", 42), smoke=a.smoke)
+    from procseq import infer, run_eval
 
-    # 2) train BOTH models (concurrently if --parallel-train, else sequentially)
     if not a.skip_train:
+        # 1) build data + tokenizer
+        print("===== BUILD DATA =====", flush=True)
+        from procseq import build_data
+        n = cfg.get("decoder", {}).get("data_per_family", 5000)
+        build_data.run(n_per_family=n, seed=cfg.get("seed", 42), smoke=a.smoke)
+
+        # 2) train models
         if a.parallel_train:
             _train_parallel(cfg_path, art)
         else:
             _train("procseq.train_decoder", cfg_path)
             _train("procseq.train_encoder", cfg_path)
 
-    # 3) inference + self-eval on our labelled mirrors (pure + physics hybrids)
-    print("\n===== INFERENCE + SELF-EVAL (mirrors) =====", flush=True)
-    from procseq import infer, infer_hybrid, infer_anomaly_hybrid, run_eval, score_official
-    infer.run_task1(cfg); infer.run_task2(cfg)
-    try:
-        infer.run_task3(cfg)
-    except Exception as e:
-        print(f"  Task 3 skipped (no encoder checkpoint): {e}", flush=True)
-    run_eval.main(["--config", cfg_path])
+        # 3) self-eval on held-out mirrors
+        print("\n===== INFERENCE + SELF-EVAL (mirrors) =====", flush=True)
+        infer.run_task1(cfg); infer.run_task2(cfg)
+        try:
+            infer.run_task3(cfg)
+        except Exception as e:
+            print(f"  Task 3 skipped (no encoder checkpoint): {e}", flush=True)
+        run_eval.main(["--config", cfg_path])
 
     # 4) real submissions from the organizer-format eval files
     if not a.no_real:

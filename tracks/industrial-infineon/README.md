@@ -15,20 +15,18 @@ pixi install                                   # option B: pixi (used on Leonard
 # 3. Download model weights (~110MB from Dropbox)
 bash download_models.sh
 
-# 4. Run inference on the official eval files
+# 4. Run inference (produces all 3 submission files + physics hybrid)
 cd solution
-PYTHONPATH=$PWD python3 -m procseq.infer --task 1 --real --config configs/inference.yaml
-PYTHONPATH=$PWD python3 -m procseq.infer --task 2 --real --config configs/inference.yaml
-PYTHONPATH=$PWD python3 -m procseq.infer --task 3 --real --config configs/inference.yaml
+PYTHONPATH=$PWD python3 -m procseq.run_all --config configs/inference.yaml --skip-train
 ```
 
 Output in `submissions/`:
-- `submission_task1_real.csv` (nextstep)
-- `submission_task2_real.csv` (completion)
-- `submission_task3_real.csv` (anomaly)
+- `nextstep.csv` (Task 1 — physics-reranked hybrid)
+- `completion.csv` (Task 2 — grammar-constrained completion)
+- `anomaly.csv` (Task 3 — physics-hybrid anomaly detection)
 
 The eval input files are at `data/eval_input_valid.csv` and `data/eval_input_anomaly.csv`.
-To run on different eval files, replace those files and rerun the commands above (without `--real`).
+To run on different eval files, replace those files before running.
 
 ## Model Weights
 

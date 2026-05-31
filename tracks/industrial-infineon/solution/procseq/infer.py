@@ -119,7 +119,9 @@ def _eval_input(cfg, name, real):
 def _sub_out(cfg, name, real):
     suffix = "_real" if real else ""
     stem, ext = name.rsplit(".", 1)
-    return Path(cfg["artifacts"]) / f"{stem}{suffix}.{ext}"
+    out = Path(cfg["artifacts"]) / f"{stem}{suffix}.{ext}"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    return out
 
 def run_task1(cfg, real=False):
     tok = load_tokenizer(Path(cfg["decoder_ckpt"]))
