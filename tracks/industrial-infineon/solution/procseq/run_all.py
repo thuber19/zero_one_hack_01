@@ -124,21 +124,6 @@ def main(argv=None):
         except Exception as e:
             print(f"  Task 3 real skipped (no encoder checkpoint): {e}", flush=True)
 
-        # Rename to final submission format: nextstep.csv, completion.csv, anomaly.csv
-        art_p = Path(art)
-        for src_name, dst_name in [
-            ("submission_task1_real.csv", "nextstep.csv"),
-            ("submission_task2_real.csv", "completion.csv"),
-            ("submission_task3_real.csv", "anomaly.csv"),
-        ]:
-            src_f = art_p / src_name
-            dst_f = art_p / dst_name
-            if src_f.exists():
-                import shutil
-                shutil.copy2(src_f, dst_f)
-                print(f"  {src_name} -> {dst_name}", flush=True)
-        print(f"\nFinal submission files in: {art}", flush=True)
-
     # 5) hybrid: physics rerank for task 1+3 (fast), skip task 2 beam decode (slow)
     try:
         from procseq import infer_hybrid, infer_anomaly_hybrid
@@ -150,6 +135,28 @@ def main(argv=None):
             infer_anomaly_hybrid.run(cfg, real=True)
     except Exception as e:
         print(f"  Hybrid step failed (non-fatal): {e}", flush=True)
+
+    # 6) Assemble final submission: hybrid for task 1+3, pure for task 2
+    if not a.no_real:
+        import shutil
+        art_p = Path(art)
+        print("\n===== FINAL SUBMISSION FILES =====", flush=True)
+        for src_name, dst_name in [
+            ("submission_task1_hybrid_real.csv", "nextstep.csv"),
+            ("submission_task2_real.csv", "completion.csv"),
+            ("submission_task3_hybrid_real.csv", "anomaly.csv"),
+        ]:
+            src_f = art_p / src_name
+            # Fall back to pure if hybrid doesn't exist
+            if not src_f.exists():
+                fallback = src_name.replace("_hybrid", "")
+                src_f = art_p / fallback
+            if src_f.exists():
+                shutil.copy2(src_f, art_p / dst_name)
+                print(f"  {src_f.name} -> {dst_name}", flush=True)
+            else:
+                print(f"  WARNING: {src_name} not found", flush=True)
+        print(f"\nFinal submission files in: {art}", flush=True)
 
     print(f"\n===== DONE in {time.time()-t0:.0f}s =====", flush=True)
     print(f"artifacts: {cfg.get('artifacts')}", flush=True)
