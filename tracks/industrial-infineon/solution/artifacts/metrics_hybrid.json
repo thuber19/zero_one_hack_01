@@ -1,0 +1,26 @@
+{
+  "task1_nextstep": {
+    "n": 600,
+    "top1": 0.9366666666666666,
+    "top3": 1.0,
+    "top5": 1.0,
+    "mrr": 0.9683333333333334,
+    "top1_category": 0.9983333333333333,
+    "mrr_category": 0.9991666666666666
+  },
+  "task3_anomaly": {
+    "n": 987,
+    "binary_accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "confusion": {
+      "tp": 387,
+      "fp": 0,
+      "tn": 600,
+      "fn": 0
+    },
+    "roc_auc": 0.4873987941429802,
+    "rule_attribution_accuracy": 0.9715762273901809
+  }
+}

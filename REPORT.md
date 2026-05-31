@@ -19,10 +19,10 @@ manufacturing process logic — wrapped in a symbolic **physics verification lay
 (*"the model proposes, physics disposes"*). A Llama-style **decoder** handles
 next-step prediction and sequence completion; a DeBERTa-style **encoder** with a
 supervised-contrastive objective handles anomaly detection. On held-out evaluation
-it reaches **Top-1 0.77 / Top-5 1.00** next-step accuracy (category-level **0.96**),
-**0.92 block-accuracy completions that are 100% rule-valid**, and an anomaly
-detector that pairs the learned encoder's confidence with a deterministic rule
-engine for an exact in-distribution verdict.
+the submitted hybrid reaches **Top-1 0.94 / Top-5 1.00** next-step accuracy
+(category-level **1.00**), **0.94 block-accuracy completions that are 100% rule-valid**,
+and a physics-hybrid anomaly detector at **F1 1.00 with 0.97 rule-attribution** — while
+we report openly that the *learned* anomaly encoder alone is ≈ chance.
 
 ---
 
@@ -103,62 +103,64 @@ Scores from the official `data/eval_metrics.py` on a **held-out self-eval split*
 predictions on the **organizer eval inputs** (`*_real`), in `solution/artifacts/`.
 Raw scores: [`solution/artifacts/metrics.json`](tracks/industrial-infineon/solution/artifacts/metrics.json).
 
-### Task 1 — Next-step prediction (learned decoder, legal-first reranked)
-| Metric | Score |
-|---|---|
-| **Top-1** | **0.772** |
-| Top-3 | 0.995 |
-| **Top-5** | **1.000** |
-| MRR | 0.883 |
-| Category Top-1 (right *operation*) | **0.963** |
-| Category MRR | 0.981 |
+### Task 1 — Next-step prediction
+| Variant | Top-1 | Top-3 | Top-5 | MRR | Category Top-1 |
+|---|---|---|---|---|---|
+| Decoder alone | 0.877 | 1.000 | 1.000 | 0.938 | 0.990 |
+| **+ physics legal-first rerank (submitted)** | **0.937** | **1.000** | **1.000** | **0.968** | **0.998** |
 
 **Baseline:** random next-step over ~200 tokens ≈ 0.005 Top-1; a frequency/bigram
-baseline is far below 0.77. The 0.96 category accuracy shows the model learns the
-*operation* (deposit / etch / clean…), not just the surface token.
+baseline is far below. Physics reranking lifts Top-1 by +0.06 (it floats legal
+candidates up). The **0.998 category accuracy** shows the model learns the *operation*
+(deposit / etch / clean…), not just the surface token.
 
 ### Task 2 — Sequence completion
 | Metric | Score |
 |---|---|
-| **Block-level accuracy** | **0.919** |
+| **Block-level accuracy** | **0.937** |
 | **Logic validity (rule-valid completions)** | **1.000** |
-| Category-token accuracy | 0.749 |
-| Token accuracy | 0.567 |
-| Exact-match | 0.142 |
+| Category-token accuracy | 0.834 |
+| Token accuracy | 0.708 |
+| Exact-match | 0.283 |
 
 Physics beam-search + repair guarantees **100% rule-valid** completions; block
-accuracy 0.92 shows they're structurally right. Exact full-sequence match is low
-(0.14) because many valid completions differ only by interchangeable steps.
+accuracy 0.94 shows they're structurally right. Exact full-sequence match (0.28) is
+lower because many valid completions differ only by interchangeable steps.
 
 ### Task 3 — Anomaly detection (honest split)
-| Variant | Binary acc | F1 | ROC-AUC | Rule attribution |
-|---|---|---|---|---|
-| Learned encoder (alone) | 0.590 | 0.453 | 0.611 | 0.140 |
-| **Physics hybrid (submitted)** | **1.000** | — | — | **exact (rule engine)** |
+| Variant | Binary acc | Precision | Recall | F1 | Rule attribution | ROC-AUC |
+|---|---|---|---|---|---|---|
+| Learned encoder (alone) | 0.608 | 0.000 | 0.000 | 0.000 | 0.000 | 0.487 |
+| **Physics hybrid (submitted)** | **1.000** | **1.000** | **1.000** | **1.000** | **0.972** | 0.49 † |
 
 The **submitted Task-3 is the physics hybrid** — rule-engine verdict + encoder
-confidence score. The learned encoder alone is ≈ chance (AUC 0.61), which we report
-openly; the rule engine carries the in-distribution verdict (caveat in the *honesty* note).
+confidence score. The rule engine delivers a perfect in-distribution verdict
+(precision/recall/F1 = 1.0) and **0.972 rule-attribution**. The *learned* encoder alone
+is **degenerate** (it predicts everything valid → F1 0, AUC 0.49 ≈ chance), which we
+report openly. † ROC-AUC is computed from the encoder's *uncalibrated* SCORE, so it sits
+at chance even though the binary verdict is perfect — calibrating that score (see next
+steps) is exactly what would lift it.
 
 ---
 
 ## What worked
 
-- **The decoder genuinely learned the logic.** Top-5 1.00 and **0.96 category
-  accuracy** are strong from-scratch results — it predicts the right *operation*, not
-  just a memorized token.
+- **The decoder genuinely learned the logic.** Top-5 1.00, Top-1 0.94 (hybrid), and
+  **0.998 category accuracy** are strong from-scratch results — it predicts the right
+  *operation*, not just a memorized token.
 - **Guaranteed-valid completions.** Physics-vetoed beam search + repair → **100%** of
-  Task-2 completions satisfy all 10 rules, with 0.92 block accuracy.
+  Task-2 completions satisfy all 10 rules, with 0.94 block accuracy.
 - **A clean neuro-symbolic seam.** The learned models and the rule engine compose
   through one interface (`infer_hybrid` / `infer_anomaly_hybrid`), so we get learned
   flexibility *and* deterministic safety without retraining.
 
 ## What didn't work
 
-- **The learned anomaly encoder.** ≈ chance (AUC 0.61, F1 0.45) — supervised-contrastive
-  on hard-negative twins did not, at this scale/step budget, beat the rule engine. We
-  ship the hybrid and report the encoder's weakness rather than hide it.
-- **Exact-match completion** is low (0.14) — expected given interchangeable steps, but
+- **The learned anomaly encoder.** ≈ chance — it collapses to predicting "valid" for
+  everything (F1 0, AUC 0.49); supervised-contrastive on hard-negative twins did not, at
+  this scale/step budget, beat the rule engine. We ship the hybrid and report the
+  encoder's weakness rather than hide it.
+- **Exact-match completion** is low (0.28) — expected given interchangeable steps, but
   it means we optimize block/validity rather than exact-match.
 - **OOD on the hidden 4th family is unmeasured** at submission time (see below) — the
   rule engine's in-distribution near-perfection will *not* transfer to keyword-free
@@ -235,7 +237,7 @@ Targeted at our actual gaps, in priority order:
 - **Task 3's near-perfect accuracy is the rule engine, not the model.** The hybrid's
   in-distribution score is strong **by construction** (the checker shares rule
   definitions with the data generator) and will **not** transfer to a novel 4th family;
-  the learned encoder alone is ≈ chance (AUC 0.61).
+  the learned encoder alone is ≈ chance (AUC 0.49, collapses to predicting "valid").
 - **Nothing in the pipeline is mocked or hardcoded** beyond the deterministic rule
   engine (intentional and exact). Training, inference, and scoring are real.
 

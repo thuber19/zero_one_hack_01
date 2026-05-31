@@ -38,9 +38,9 @@ python -m procseq.run_all --config configs/leonardo_decoder.yaml --skip-train  #
 
 | Task | Headline |
 |---|---|
-| 1 · Next-step | **Top-1 0.772 · Top-5 1.000 · MRR 0.88**, next-operation accuracy **0.963** |
-| 2 · Completion | **Block-level 0.92**, completions **100% rule-valid** |
-| 3 · Anomaly | physics hybrid (rule verdict + learned score); learned encoder alone AUC 0.61 (honest) |
+| 1 · Next-step | **Top-1 0.937 · Top-5 1.000 · MRR 0.97**, next-operation accuracy **0.998** |
+| 2 · Completion | **Block-level 0.94**, completions **100% rule-valid** |
+| 3 · Anomaly | physics hybrid: **F1 1.0, rule-attribution 0.97**; learned encoder alone ≈ chance (AUC 0.49, honest) |
 
 ## The three tasks (+ hidden 4th family)
 

@@ -299,10 +299,10 @@ para(tf, [("It works — and we can ", {"color": TEXT}), ("prove it learned", {"
 
 rows = [
     ("Task", "Headline", "Also"),
-    ("1 · Next-step", "Top-5 1.000  ·  Top-1 0.772", "MRR 0.88"),
-    ("2 · Completion", "Block-level 0.92  ·  100% rule-valid", "token 0.57 · exact 0.14"),
-    ("3 · Anomaly", "Binary acc 1.000  (hybrid)", "encoder alone AUC 0.61 (honest)"),
-    ("Understanding", "0.963 next-operation acc", "learns function, not just names"),
+    ("1 · Next-step", "Top-1 0.937  ·  Top-5 1.000", "MRR 0.97  (hybrid)"),
+    ("2 · Completion", "Block-level 0.94  ·  100% rule-valid", "token 0.71 · exact 0.28"),
+    ("3 · Anomaly", "F1 1.000  ·  rule-attr 0.972", "encoder alone AUC 0.49 (honest)"),
+    ("Understanding", "0.998 next-operation acc", "learns function, not just names"),
 ]
 gt = s.shapes.add_table(len(rows), 3, Inches(0.9), Inches(2.7),
                         Inches(11.5), Inches(2.55)).table
@@ -333,21 +333,21 @@ for r in range(len(rows)):
 _, tf = textbox(s, 0.9, 5.45, 11.6, 0.55)
 para(tf, [("learns ", {}), ("function", {"color": ACCENT2, "bold": True}),
           (", not just names: predicts the right ", {}),
-          ("operation 96% of the time", {"color": ACCENT2, "bold": True}),
+          ("operation 99.8% of the time", {"color": ACCENT2, "bold": True}),
           ("   ·   completions are 100% rule-valid", {})],
      size=13, color=MUTED, font=MONO, first=True)
 _, tf = textbox(s, 0.9, 6.15, 11.6, 1.0)
 para(tf, [("Honest provenance: ", {"color": MUTED, "bold": True}),
           ("real numbers from the organizer's official scorer on a held-out self-eval split, "
            "from the completed ProcSeq Leonardo run (base, 16k steps). The learned anomaly "
-           "encoder alone is weak (AUC 0.61) — the physics hybrid carries Task 3. Organizer "
+           "encoder alone is ~chance (AUC 0.49) — the physics hybrid carries Task 3. Organizer "
            "hidden-test and 4th-family OOD are pending.", {"color": FAINT})],
      size=10.5, leading=1.3, first=True)
 notes(s, "35s. Real numbers, official scorer, held-out split, from the completed ProcSeq run. "
-         "Task1: Top-5 perfect, Top-1 0.77, and 0.96 next-OPERATION accuracy → it learned function, "
-         "not just names. Task2: block-level 0.92 and 100% rule-valid completions. Task3, be honest: "
-         "the learned encoder alone is ~chance (AUC 0.61), so the physics hybrid gives the exact "
-         "in-distribution verdict. Organizer hidden test + 4th-family OOD still pending.")
+         "Task1: Top-5 perfect, Top-1 0.94 (hybrid), and 0.998 next-OPERATION accuracy → it learned "
+         "function, not just names. Task2: block-level 0.94 and 100% rule-valid completions. Task3, "
+         "be honest: the learned encoder alone is ~chance (AUC 0.49, collapses to all-valid), so the "
+         "physics hybrid gives the exact verdict (F1 1.0, rule-attr 0.97). Hidden test + OOD pending.")
 
 # =========================================================================
 # 7 · EVIDENCE — did it actually learn?
@@ -359,14 +359,14 @@ para(tf, [("Not just a score — ", {"color": TEXT}), ("evidence it learned the 
      size=31, bold=True, first=True, leading=1.06)
 evcards = [
     ("Learns the operation",
-     "0.963 next-OPERATION accuracy — it predicts the right kind of step (deposit / etch / "
+     "0.998 next-OPERATION accuracy — it predicts the right kind of step (deposit / etch / "
      "clean), not just a memorized name. That's process logic, not pattern recall."),
     ("Always valid",
      "100% of completions satisfy all 10 rules. Physics-vetoed beam search + repair means "
      "0 illegal outputs — a guarantee a neural model alone can't give."),
     ("Honest on the hard task",
-     "The learned anomaly encoder alone is ~chance (AUC 0.61); the physics hybrid supplies "
-     "the exact in-distribution verdict. We show both numbers, not just the flattering one."),
+     "The learned anomaly encoder alone is ~chance (AUC 0.49); the physics hybrid supplies "
+     "the exact verdict (F1 1.0, rule-attr 0.97). We show both, not just the flattering one."),
 ]
 cw, cy, ch = 3.71, 3.0, 2.75
 for i, (t, b) in enumerate(evcards):
@@ -375,9 +375,9 @@ _, tf = textbox(s, 0.9, 6.1, 11.6, 0.7)
 para(tf, [("Every number is held-out and official-scorer; the organizer hidden test and "
            "4th-family OOD are marked pending — we report what's measured.", {})],
      size=12, color=FAINT, font=MONO, leading=1.25, first=True)
-notes(s, "30s. The evidence it LEARNED, not memorized: 0.96 next-operation accuracy (right step "
+notes(s, "30s. The evidence it LEARNED, not memorized: 0.998 next-operation accuracy (right step "
          "type, not just a name); 100% rule-valid completions (the physics guarantee); and we're "
-         "honest that the learned anomaly encoder is weak (AUC 0.61) so the hybrid carries Task 3. "
+         "honest that the learned anomaly encoder is ~chance (AUC 0.49) so the hybrid carries Task 3. "
          "All held-out, official scorer; hidden test + OOD marked pending.")
 
 # =========================================================================

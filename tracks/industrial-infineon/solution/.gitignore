@@ -11,6 +11,7 @@ artifacts/*
 !artifacts/completion.csv
 !artifacts/anomaly.csv
 !artifacts/metrics.json
+!artifacts/metrics_hybrid.json
 !artifacts/raw/
 !artifacts/tb_logs/
 runs/
