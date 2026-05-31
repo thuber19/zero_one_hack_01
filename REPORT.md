@@ -166,13 +166,34 @@ openly; the rule engine carries the in-distribution verdict (caveat in the *hone
 
 ## What you'd do with another 36 hours
 
-- Train **two larger model sizes / more steps** to extend a scaling curve (current run:
-  `base`, 16k steps, 20k seqs/family).
-- **Strengthen the encoder** with an ontology *input channel* (feed each step's physical
-  category into the model) so it reads — and flags — a family it never tokenized.
-- Run `procseq/ood_novel.py` on the trained checkpoints to produce the **novel-family
-  OOD curve** (rename fraction 0.0 → 0.5 → 1.0) — the honest generalization number.
-- Calibrate the hybrid Task-3 score and add a per-family breakdown to `metrics.json`.
+Targeted at our actual gaps, in priority order:
+
+- **Measure the OOD cliff — the one number we're missing.** Task 4 is graded post-submission
+  on a hidden 4th family, and our hybrid's near-perfect Task-3 verdict is in-distribution
+  *by construction* — it won't hold there. First action: run `procseq/ood_novel.py` on our
+  trained checkpoints across rename-fraction 0.0 → 0.5 → 1.0 to turn the current "pending"
+  into a real degradation curve, so we know exactly where the rules stop helping.
+- **Make the learned encoder actually contribute to Task 3 (our weakest result, AUC 0.61).**
+  Right now the rule engine carries the verdict and the model adds nothing to the scored
+  anomaly output. Two concrete lifts: (a) **calibrate** the encoder's probability
+  (temperature scaling on a held-out split) so the hybrid's `SCORE` column is a true
+  P(valid) — this raises the submitted `anomaly.csv` ROC-AUC with *zero* retraining; and
+  (b) retrain it with **harder contrastive negatives** (multi-rule and near-window breaks)
+  to push AUC above chance *where the rules can't fire* — i.e., on OOD, the only place its
+  value is real.
+- **Add the ontology input channel — highest-leverage fix for the OOD gap.** We already
+  show the decoder learns the *operation* (0.963 next-category) but it tokenizes raw step
+  *names*, so a novel family is all-`[UNK]`. Feeding each step's physical category as a
+  second input embedding lets the models read — and the encoder flag — a family they never
+  tokenized, directly improving Task-1/2 and anomaly on the hidden 4th family.
+- **Close the per-family deliverable gap.** `metrics.json` is aggregate-only; the track
+  asks for a per-family breakdown. Emit per-family Top-1/Top-5/block/F1 (family is in the
+  `EXAMPLE_ID`) from the existing predictions — a required deliverable, and it exposes the
+  weakest family (likely IC, the most structurally distinct) to target next.
+- **Chart the scaling curve + ship the weights.** Train `small`/`base`/`large` on identical
+  data for an accuracy-vs-compute curve (the track's stretch goal; we have a single `base`,
+  16k-step run), and host the ~210 MB checkpoints externally (GitHub blocks LFS on a fork)
+  so the trained weights are downloadable, not only reproducible.
 
 ---
 
