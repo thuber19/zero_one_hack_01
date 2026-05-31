@@ -211,10 +211,18 @@ Targeted at our actual gaps, in priority order:
   trailing on every learned metric — T1 0.910 vs IGBT 0.955, T2 token 0.572 vs 0.786,
   exact 0.120 vs 0.365. IC routes are the most structurally distinct, so it's the clearest
   target for more IC-weighted training data or the ontology channel above.
-- **Chart the scaling curve + ship the weights.** Train `small`/`base`/`large` on identical
+- **Scale training + broaden the data.** Train `small`/`base`/`large` on identical
   data for an accuracy-vs-compute curve (the track's stretch goal; we have a single `base`,
-  16k-step run), and host the ~210 MB checkpoints externally (GitHub blocks LFS on a fork)
-  so the trained weights are downloadable, not only reproducible.
+  16k-step run), then extend training beyond the three provided families to **additional
+  semiconductor process datasets** — more device types and fab routes — so the model
+  acquires broader manufacturing-process understanding instead of memorising the patterns
+  of MOSFET/IGBT/IC alone. (Also: host the ~210 MB checkpoints externally so trained
+  weights are downloadable, not only reproducible.)
+- **Polish the demo dashboard.** Khaled's [`solution/dashboard/app.py`](tracks/industrial-infineon/solution/dashboard/app.py)
+  already runs and shows baseline-vs-trained outputs; the next pass makes it
+  cleaner and more interactive — pick any eval example to inspect, toggle decoder-alone
+  vs hybrid side-by-side, surface the rule-engine's *why* on flagged anomalies, and
+  render the per-family results + training loss curves inline.
 
 ---
 
