@@ -136,11 +136,9 @@ accuracy 0.92 shows they're structurally right. Exact full-sequence match is low
 | Learned encoder (alone) | 0.590 | 0.453 | 0.611 | 0.140 |
 | **Physics hybrid (submitted)** | **1.000** | — | — | **exact (rule engine)** |
 
-**This is the honest core of our anomaly story:** the *learned* encoder alone is only
-≈ chance — anomaly is the hardest task and our from-scratch encoder did not crack it.
-So the **submission uses the physics hybrid**: the deterministic rule engine supplies
-the exact in-distribution verdict + broken-rule attribution, and the encoder supplies
-a continuous confidence score. See *A note on honesty* below.
+The **submitted Task-3 is the physics hybrid** — rule-engine verdict + encoder
+confidence score. The learned encoder alone is ≈ chance (AUC 0.61), which we report
+openly; the rule engine carries the in-distribution verdict (caveat in the *honesty* note).
 
 ---
 
@@ -213,12 +211,10 @@ a continuous confidence score. See *A note on honesty* below.
 - **Reported numbers are held-out self-eval, not the organizer's hidden test.** The
   submitted CSVs are our models' predictions on the organizer eval inputs; we cannot
   see those labels, so the tables above are our best honest estimate from a held-out split.
-- **Task 3 is carried by the rule engine, not the learned encoder.** The encoder alone
-  is ≈ chance (AUC 0.61). The hybrid's near-perfect in-distribution accuracy comes from
-  the deterministic 10-rule checker; because that checker shares its rule definitions
-  with the data generator, its in-distribution score is strong **by construction** and
-  will **not** hold on a genuinely novel 4th family. We present the learned encoder's
-  real (weak) number alongside the hybrid so this is explicit.
+- **Task 3's near-perfect accuracy is the rule engine, not the model.** The hybrid's
+  in-distribution score is strong **by construction** (the checker shares rule
+  definitions with the data generator) and will **not** transfer to a novel 4th family;
+  the learned encoder alone is ≈ chance (AUC 0.61).
 - **Nothing in the pipeline is mocked or hardcoded** beyond the deterministic rule
   engine (intentional and exact). Training, inference, and scoring are real.
 

@@ -350,36 +350,67 @@ notes(s, "35s. Real numbers, official scorer, held-out split, from the completed
          "in-distribution verdict. Organizer hidden test + 4th-family OOD still pending.")
 
 # =========================================================================
-# 7 · CLOSE
+# 7 · EVIDENCE — did it actually learn?
 # =========================================================================
 s = slide()
-kicker(s, "Why this submission")
-_, tf = textbox(s, 0.9, 1.35, 11.0, 1.7)
-para(tf, [("We measured ", {"color": TEXT}), ("whether the model learned", {"color": ACCENT2}),
-          (" — not just that it scored.", {"color": TEXT})],
-     size=30, bold=True, first=True, leading=1.12)
-closecards = [
-    ("Honest evaluation",
-     "Every number sits between an n-gram floor and a rule-oracle ceiling, plus a logic "
-     "probe & a novel-vocabulary OOD stress test we built to make it fail."),
-    ("Hybrid & robust",
-     "Learned plausibility + symbolic guarantees → 0 illegal outputs, a calibratable "
-     "anomaly score, and a graceful OOD story."),
-    ("Reproducible",
-     "make smoke in <1 min; one command trains the full pipeline on Leonardo. Unit tests, "
-     "fixed seeds, fully open stack."),
+kicker(s, "Results · did it actually learn?")
+_, tf = textbox(s, 0.9, 1.25, 11.6, 1.3)
+para(tf, [("Not just a score — ", {"color": TEXT}), ("evidence it learned the logic.", {"color": ACCENT2})],
+     size=31, bold=True, first=True, leading=1.06)
+evcards = [
+    ("Learns the operation",
+     "0.963 next-OPERATION accuracy — it predicts the right kind of step (deposit / etch / "
+     "clean), not just a memorized name. That's process logic, not pattern recall."),
+    ("Always valid",
+     "100% of completions satisfy all 10 rules. Physics-vetoed beam search + repair means "
+     "0 illegal outputs — a guarantee a neural model alone can't give."),
+    ("Honest on the hard task",
+     "The learned anomaly encoder alone is ~chance (AUC 0.61); the physics hybrid supplies "
+     "the exact in-distribution verdict. We show both numbers, not just the flattering one."),
 ]
-cw, cy, ch = 3.71, 3.2, 2.4
-for i, (title, body) in enumerate(closecards):
-    card(s, 0.9 + i * (cw + 0.30), cy, cw, ch, [(title, {})], [(body, {})], accent=LINE)
-_, tf = textbox(s, 0.9, 5.95, 11.6, 1.0)
+cw, cy, ch = 3.71, 3.0, 2.75
+for i, (t, b) in enumerate(evcards):
+    card(s, 0.9 + i * (cw + 0.30), cy, cw, ch, [(t, {})], [(b, {})], accent=LINE)
+_, tf = textbox(s, 0.9, 6.1, 11.6, 0.7)
+para(tf, [("Every number is held-out and official-scorer; the organizer hidden test and "
+           "4th-family OOD are marked pending — we report what's measured.", {})],
+     size=12, color=FAINT, font=MONO, leading=1.25, first=True)
+notes(s, "30s. The evidence it LEARNED, not memorized: 0.96 next-operation accuracy (right step "
+         "type, not just a name); 100% rule-valid completions (the physics guarantee); and we're "
+         "honest that the learned anomaly encoder is weak (AUC 0.61) so the hybrid carries Task 3. "
+         "All held-out, official scorer; hidden test + OOD marked pending.")
+
+# =========================================================================
+# 8 · WHAT'S NEXT + CLOSE
+# =========================================================================
+s = slide()
+kicker(s, "What we'd do next")
+_, tf = textbox(s, 0.9, 1.25, 11.6, 1.3)
+para(tf, [("Clear next steps, ", {"color": TEXT}), ("already scoped.", {"color": ACCENT2})],
+     size=31, bold=True, first=True, leading=1.06)
+nexts = [
+    [("Scale the curve", {"color": TEXT, "bold": True}),
+     (" — two larger model sizes / more steps to chart accuracy vs. compute.", {})],
+    [("Ontology input channel", {"color": TEXT, "bold": True}),
+     (" — feed each step's physical category into the encoder so it reads an unseen 4th family.", {})],
+    [("The honest OOD curve", {"color": TEXT, "bold": True}),
+     (" — run the novel-vocabulary stress test on the trained models (rename fraction 0 → 1).", {})],
+    [("Calibrate + per-family", {"color": TEXT, "bold": True}),
+     (" — calibrate the hybrid anomaly score and add a per-family results breakdown.", {})],
+]
+_, tf = textbox(s, 0.9, 2.9, 11.5, 3.0)
+for i, b in enumerate(nexts):
+    para(tf, [("▸  ", {"color": ACCENT, "font": MONO})] + b,
+         size=18, color=MUTED, leading=1.3, space_after=16, first=(i == 0))
+_, tf = textbox(s, 0.9, 6.0, 11.6, 1.0)
 para(tf, [("ProcSeq", {"color": TEXT, "bold": True}),
           (" — process logic, learned, guaranteed, and honestly benchmarked.   ", {"color": MUTED}),
           ("Thank you.", {"color": ACCENT2, "bold": True})],
      size=17, leading=1.3, first=True)
-notes(s, "20s close. Our differentiator is honesty: floor-to-ceiling ladder, logic probe, "
-         "and a novel-vocab OOD test we designed to break our own model. Hybrid gives 0 "
-         "illegal outputs. Fully reproducible on Leonardo. Thank you — questions?")
+notes(s, "20s close. Concrete next steps: scaling curve, an ontology input channel so the "
+         "encoder can read an unseen family, the honest novel-vocab OOD curve, and score "
+         "calibration + per-family breakdown. ProcSeq: process logic, learned, guaranteed, "
+         "and honestly benchmarked. Thank you — questions?")
 
 # ---- save ----------------------------------------------------------------
 OUT = "ProcSeq_Pitch.pptx"

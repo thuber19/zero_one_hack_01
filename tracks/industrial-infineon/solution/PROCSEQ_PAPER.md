@@ -8,6 +8,16 @@
 
 ---
 
+> **📌 Results note (read first).** This paper documents the **design and methodology**.
+> The **final, authoritative results** are in the root [`REPORT.md`](../../../REPORT.md) and
+> [`artifacts/metrics.json`](artifacts/metrics.json), from the **completed** Leonardo run
+> (`procseq_base_d20000_s16000`): Task 1 Top-1 **0.772** / Top-5 **1.000** / next-operation
+> **0.963**; Task 2 block-level **0.92**, **100% rule-valid**; Task 3 via the physics hybrid
+> (learned encoder alone AUC 0.61). Where sections below say "pending" or cite a companion
+> pipeline as a reference, **`REPORT.md` supersedes them** — those were written before the run finished.
+
+---
+
 ## Abstract
 
 We study whether a learned sequence model can internalize the *process logic* of

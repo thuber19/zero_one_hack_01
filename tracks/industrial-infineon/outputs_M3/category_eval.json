@@ -1,8 +1,0 @@
-{
-  "n_categories": 18,
-  "random_baseline": 0.05555555555555555,
-  "id_category_acc": 0.9453307522862292,
-  "id_step_acc": 0.804752686736533,
-  "ood_category_acc": 0.4105960264900662,
-  "ood_step_acc": 0.152317880794702
-}
