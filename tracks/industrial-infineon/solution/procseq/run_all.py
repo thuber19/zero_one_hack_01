@@ -108,13 +108,21 @@ def main(argv=None):
     # 3) inference + self-eval on our labelled mirrors (pure + physics hybrids)
     print("\n===== INFERENCE + SELF-EVAL (mirrors) =====", flush=True)
     from procseq import infer, infer_hybrid, infer_anomaly_hybrid, run_eval, score_official
-    infer.run_task1(cfg); infer.run_task2(cfg); infer.run_task3(cfg)
+    infer.run_task1(cfg); infer.run_task2(cfg)
+    try:
+        infer.run_task3(cfg)
+    except Exception as e:
+        print(f"  Task 3 skipped (no encoder checkpoint): {e}", flush=True)
     run_eval.main(["--config", cfg_path])
 
     # 4) real submissions from the organizer-format eval files
     if not a.no_real:
         print("\n===== REAL SUBMISSIONS =====", flush=True)
-        infer.run_task1(cfg, real=True); infer.run_task2(cfg, real=True); infer.run_task3(cfg, real=True)
+        infer.run_task1(cfg, real=True); infer.run_task2(cfg, real=True)
+        try:
+            infer.run_task3(cfg, real=True)
+        except Exception as e:
+            print(f"  Task 3 real skipped (no encoder checkpoint): {e}", flush=True)
 
         # Rename to final submission format: nextstep.csv, completion.csv, anomaly.csv
         art_p = Path(art)

@@ -61,5 +61,38 @@ def main(argv=None):
     out = art / "metrics.json"; out.write_text(json.dumps(results, indent=2))
     print(json.dumps(results, indent=2)); print(f"-> {out}")
 
+    # Score hybrid submissions if they exist
+    hybrid = {}
+    if (art / "submission_task1_hybrid.csv").exists():
+        preds = {}
+        with open(art / "submission_task1_hybrid.csv") as f:
+            for r in csv.DictReader(f):
+                preds[r["EXAMPLE_ID"]] = [r[f"RANK_{k}"] for k in range(1,6)]
+        hybrid["task1_nextstep"] = em.score_nextstep(preds, ns_gold)
+    if (art / "submission_task2_hybrid.csv").exists():
+        preds = {}
+        with open(art / "submission_task2_hybrid.csv") as f:
+            for r in csv.DictReader(f):
+                preds[r["EXAMPLE_ID"]] = (r["PREDICTED_SEQUENCE"].split("|")
+                                          if r["PREDICTED_SEQUENCE"] else [])
+        hybrid["task2_completion"] = em.score_completion(preds, comp_gold)
+        recon = [partial[eid] + preds.get(eid, []) for eid in partial]
+        hybrid["task2_logic_validity"] = em.logic_validity_rate(recon)
+    if (art / "submission_task3_hybrid.csv").exists():
+        gold3 = {}
+        with open(art / "eval_anomaly_labels.csv") as f:
+            for r in csv.DictReader(f):
+                gold3[r["EXAMPLE_ID"]] = (int(r["IS_VALID"]), r["PREDICTED_RULE"])
+        preds = {}
+        with open(art / "submission_task3_hybrid.csv") as f:
+            for r in csv.DictReader(f):
+                preds[r["EXAMPLE_ID"]] = (int(r["IS_VALID"]),
+                    float(r["SCORE"] or 0.5), r["PREDICTED_RULE"])
+        hybrid["task3_anomaly"] = em.score_anomaly(preds, gold3)
+    if hybrid:
+        out_h = art / "metrics_hybrid.json"
+        out_h.write_text(json.dumps(hybrid, indent=2))
+        print(json.dumps(hybrid, indent=2)); print(f"-> {out_h}")
+
 if __name__ == "__main__":
     main()

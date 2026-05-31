@@ -108,9 +108,10 @@ if [ "$CHOICE" = "3" ]; then
 
     [ ! -d "$SOL" ] && echo "ERROR: $SOL not found." && exit 1
 
-    OUTNAME="procseq_${PSIZE}_d${PDATA}_s${PSTEPS}"
-    OUTDIR="$RUNS_DIR/$OUTNAME"
-    CFG="$SOL/configs/_run.yaml"
+    SEED=$RANDOM
+    OUTNAME="procseq_${PSIZE}_d${PDATA}_s${PSTEPS}_seed${SEED}"
+    OUTDIR="${SCRATCH:-$HOME}/runs_no_seed/$OUTNAME"
+    CFG="$SOL/configs/_run_${OUTNAME}.yaml"
 
     echo "Installing procseq pixi env..."
     "$PIXI" install --manifest-path "$PROJECT_DIR/pixi.toml" -e procseq
@@ -118,7 +119,7 @@ if [ "$CHOICE" = "3" ]; then
     mkdir -p "$OUTDIR"
     cat > "$CFG" <<YAML
 run_name: ${OUTNAME}
-seed: 42
+seed: ${SEED}
 precision: bf16
 artifacts: ${OUTDIR}
 decoder_ckpt: ${OUTDIR}/decoder
