@@ -34,6 +34,8 @@ shapes. To change wording, edit **both** (they're kept in sync by hand), or just
 the `.pptx` directly in PowerPoint if you only need the deliverable.
 
 ## Notes on the numbers
-All metrics are the **real, official-scorer** results from the companion physics pipeline
-on a held-out split (see `../../REAL_BENCHMARKS.md`); the full from-scratch ProcSeq
-Leonardo run is pending. Slide 6 states this provenance honestly.
+All metrics are the **real, official-scorer** results from the completed ProcSeq
+Leonardo run (`procseq_base_d20000_s16000`), held-out self-eval — see
+[`../artifacts/metrics.json`](../artifacts/metrics.json) and the root
+[`REPORT.md`](../../../../REPORT.md). Slide 6 states the provenance + honest limits
+(learned anomaly encoder is weak; the physics hybrid carries Task 3).

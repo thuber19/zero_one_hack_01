@@ -147,8 +147,8 @@ for label, red in pills:
          font=MONO, align=PP_ALIGN.CENTER, first=True)
     px += w + 0.2
 _, tf = textbox(s, 0.9, 5.95, 11, 1.0)
-para(tf, [("Team ProcSeq", {})], size=16, color=TEXT, bold=True, first=True, space_after=4)
-para(tf, [("Fathy Shalaby · Mina Mikail · Khaled Elyamany  ·  edit names here", {})],
+para(tf, [("Team TBD", {})], size=16, color=TEXT, bold=True, first=True, space_after=4)
+para(tf, [("Tobias Huber · Mina Mikail · Khaled El Yamany · Fathy Shalaby", {})],
      size=12.5, color=FAINT, font=MONO)
 notes(s, "30s. Hook: a chip recipe is a long ordered sequence; we taught a model its "
          "grammar and built a hybrid that guarantees valid output. Three tasks plus a "
@@ -299,10 +299,10 @@ para(tf, [("It works — and we can ", {"color": TEXT}), ("prove it learned", {"
 
 rows = [
     ("Task", "Headline", "Also"),
-    ("1 · Next-step", "Top-5 1.000  ·  Top-1 0.690", "MRR 0.84"),
-    ("2 · Completion", "NED 0.226  (lower = better)", "Block-level 0.69"),
-    ("3 · Anomaly", "F1 1.000  ·  ROC-AUC 1.000", "rule engine, in-dist."),
-    ("Understanding", "0.944 category acc (ID)", "0.37–0.41 OOD vs 0.15 lexical"),
+    ("1 · Next-step", "Top-5 1.000  ·  Top-1 0.772", "MRR 0.88"),
+    ("2 · Completion", "Block-level 0.92  ·  100% rule-valid", "token 0.57 · exact 0.14"),
+    ("3 · Anomaly", "Hybrid verdict — exact in-dist", "encoder alone AUC 0.61 (honest)"),
+    ("Understanding", "0.963 next-operation acc", "learns function, not just names"),
 ]
 gt = s.shapes.add_table(len(rows), 3, Inches(0.9), Inches(2.7),
                         Inches(11.5), Inches(2.55)).table
@@ -331,21 +331,23 @@ for r in range(len(rows)):
             f.size = Pt(12.5); f.name = MONO; f.color.rgb = MUTED
 
 _, tf = textbox(s, 0.9, 5.45, 11.6, 0.55)
-para(tf, [("learned ", {}), ("function", {"color": ACCENT2, "bold": True}),
-          (", not names: category ≫ lexical OOD   ·   transfers to unseen families at ", {}),
-          ("6–7× random", {"color": ACCENT2, "bold": True})],
+para(tf, [("learns ", {}), ("function", {"color": ACCENT2, "bold": True}),
+          (", not just names: predicts the right ", {}),
+          ("operation 96% of the time", {"color": ACCENT2, "bold": True}),
+          ("   ·   completions are 100% rule-valid", {})],
      size=13, color=MUTED, font=MONO, first=True)
 _, tf = textbox(s, 0.9, 6.15, 11.6, 1.0)
 para(tf, [("Honest provenance: ", {"color": MUTED, "bold": True}),
-          ("real numbers from the organizer's official scorer on a disjoint held-out split "
-           "(companion physics pipeline). The full from-scratch ProcSeq run on Leonardo "
-           "(4×A100) is next; we report what is measured and mark what is pending.", {"color": FAINT})],
+          ("real numbers from the organizer's official scorer on a held-out self-eval split, "
+           "from the completed ProcSeq Leonardo run (base, 16k steps). The learned anomaly "
+           "encoder alone is weak (AUC 0.61) — the physics hybrid carries Task 3. Organizer "
+           "hidden-test and 4th-family OOD are pending.", {"color": FAINT})],
      size=10.5, leading=1.3, first=True)
-notes(s, "35s. Real numbers, official scorer, held-out split. Task1 Top-5 perfect, MRR 0.84. "
-         "Task2 edit distance 0.23. Task3 F1 1.0 (rule engine). KILLER ROW: the network "
-         "predicts the right step CATEGORY 0.944 in-dist and still 0.37-0.41 on unseen families "
-         "(6-7x random) while lexical name accuracy is ~0.15 → it learned FUNCTION, not names. "
-         "Be honest: these are the companion pipeline; full ProcSeq Leonardo run is pending.")
+notes(s, "35s. Real numbers, official scorer, held-out split, from the completed ProcSeq run. "
+         "Task1: Top-5 perfect, Top-1 0.77, and 0.96 next-OPERATION accuracy → it learned function, "
+         "not just names. Task2: block-level 0.92 and 100% rule-valid completions. Task3, be honest: "
+         "the learned encoder alone is ~chance (AUC 0.61), so the physics hybrid gives the exact "
+         "in-distribution verdict. Organizer hidden test + 4th-family OOD still pending.")
 
 # =========================================================================
 # 7 · CLOSE
@@ -364,8 +366,8 @@ closecards = [
      "Learned plausibility + symbolic guarantees → 0 illegal outputs, a calibratable "
      "anomaly score, and a graceful OOD story."),
     ("Reproducible",
-     "make smoke in <1 min; one command trains the full pipeline on Leonardo. 29 tests, "
-     "fixed seeds, open stack."),
+     "make smoke in <1 min; one command trains the full pipeline on Leonardo. Unit tests, "
+     "fixed seeds, fully open stack."),
 ]
 cw, cy, ch = 3.71, 3.2, 2.4
 for i, (title, body) in enumerate(closecards):
