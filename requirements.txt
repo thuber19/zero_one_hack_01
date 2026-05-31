@@ -1,16 +1,25 @@
-# Industrial AI track — dependencies.
+# Industrial AI track — dependencies for THE SUBMISSION (procseq).
 #
-# The NEURAL pipeline (training + inference) needs these:
-torch>=2.0
-numpy>=1.24
-scikit-learn>=1.3
+# procseq = the two from-scratch neural models (Llama-style decoder + DeBERTa-style
+# encoder) under tracks/industrial-infineon/solution/. These are what the jury runs.
+torch>=2.3
+transformers>=4.44
+tokenizers>=0.19
+accelerate>=0.33
+numpy>=1.26
+pyyaml>=6.0
 matplotlib>=3.7
+tensorboard
+pytest>=8.0          # for `make smoke` unit tests
 
-# The PHYSICS harness (validation, refinery, fix, generators, exhaustive_test,
-# explain, export, reward) is PURE PYTHON STANDARD LIBRARY — no dependencies.
-# It runs on any Python 3.9+ with nothing installed, which is why all
-# correctness verification (exhaustive_test.py, integration_test.py) runs
-# anywhere, including CI and login nodes.
+# scikit-learn is only needed by the PHYSICS verification companion (src/ RF);
+# procseq itself does not require it. Kept so the companion runs from the same env.
+scikit-learn>=1.3
+
+# The PHYSICS verification companion (validation, refinery, fix, rule engine) is
+# PURE PYTHON STANDARD LIBRARY — no deps — so all correctness checks run anywhere.
 #
-# A pixi environment is also provided (tracks/industrial-infineon/pixi.toml /
-# pixi_cuda.toml) for reproducible Leonardo provisioning.
+# Reproducible Leonardo provisioning: pixi env `-e procseq`
+# (tracks/industrial-infineon/pixi.toml, torch==2.3.1 CUDA-12). On Leonardo prefer
+# pixi over pip so torch sees the A100 (a newer torch pulls CUDA-13 and falls back
+# to CPU).

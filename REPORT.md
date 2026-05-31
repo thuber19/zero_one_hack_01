@@ -1,152 +1,227 @@
-# REPORT — Industrial AI: Learning and Benchmarking Process Logic
+# TBD — Industrial AI (Infineon): Learning & Benchmarking Process Logic
 
-## TL;DR
+## Team
 
-We built a hybrid neuro-symbolic system that learns semiconductor process sequences by combining a neural sequence model (LSTM/Transformer) with a Random Forest candidate filter and physics-based validation. The system predicts next process steps with 67% Top-1 / 100% Top-5 accuracy, completes partial sequences with 70% block-level accuracy, and detects process rule violations with 100% precision — all trained from scratch on synthetic data using the Leonardo supercomputer.
+- **Fathy Shalaby** — neural pipeline (procseq): from-scratch decoder + encoder, training on Leonardo
+- **Mina Mikail** — physics / verification layer, hybrid inference, evaluation harness
+- **Tobias Huber** — data pipeline, infrastructure & Leonardo orchestration
+- **Khaled El Yamany** — data preparation & evaluation support
 
-## Problem
-
-Semiconductor manufacturing follows complex process routes where order matters: you must clean before depositing, pattern before etching, test before shipping. The challenge is whether a model can learn this underlying process logic — not just memorize sequences, but generalize to unseen variations and detect violations.
-
-We address three tasks:
-1. **Next-step prediction**: Given a partial process, predict what comes next
-2. **Sequence completion**: Complete a partially executed process route
-3. **Anomaly detection**: Identify process rule violations in a sequence
-
-## Approach
-
-### Architecture: Hybrid RF + Neural Model
-
-```
-Sequence so far → [Random Forest] → candidate set (top-15)
-                → [LSTM/Transformer] → ranked predictions
-                → [Physics validator] → guaranteed valid output
-```
-
-- **Random Forest**: Trained on n-gram features (current step, 3 previous steps, family, litho level, block position, sequence progress). Produces a candidate set of ~15 plausible next steps with 99.9% recall — the correct answer is almost always in the set.
-- **Neural model**: Small LSTM (1.1M params) or Transformer (6.4M params) trained from scratch with a custom 205-token vocabulary where each process step is a single token. Ranks candidates using full sequence context via next-token prediction (causal LM objective).
-- **Physics validator**: Rule-based system implementing the 10 process logic constraints. Used for anomaly detection and optionally for constrained decoding during sequence completion.
-
-### Key Technical Decisions
-
-- **From-scratch training** over fine-tuning a pretrained LLM: the vocabulary is only ~205 tokens, making a pretrained 50K-token model wasteful. A purpose-built model trains in minutes.
-- **LSTM over Transformer**: Both architectures converge to identical accuracy (~80.9%), but the LSTM trains 12x faster (2s/epoch vs 24s) with 6x fewer parameters. Process sequences are relatively short (~130 steps) and strictly ordered — LSTM's sequential inductive bias is well-suited.
-- **RF masking at inference**: Rather than having the neural model choose from 205 tokens, the RF narrows to ~15 candidates. This eliminates structurally impossible transitions and boosts Top-3/5 accuracy to near-perfect.
-- **Separate anomaly detection**: Task 3 uses the rule validator directly (the 10 forbidden patterns from the process grammar), achieving 100% accuracy. The neural model's per-token loss serves as an additional soft signal.
-
-### Training Setup
-
-- **Data**: Up to 60K synthetic sequences (20K per product family: MOSFET, IGBT, IC) generated from the provided process grammar with validated rule compliance
-- **Infrastructure**: Leonardo supercomputer, NVIDIA A100 GPUs, pixi environment management
-- **Training**: AdamW optimizer, cosine annealing LR schedule, early stopping (patience=20)
-- **Evaluation**: 10% held-out split, scored with the official `eval_metrics.py` scorer
-
-## How to Run
-
-```bash
-# On Leonardo:
-cd ~/process-sequence-model
-
-# Install environment
-~/.pixi/bin/pixi install
-
-# Launch interactive training job
-bash jobs/run.sh
-# Select architecture, data size, epochs, batch size, RF on/off, physics on/off
-
-# Or run inference on official eval files directly
-pixi run python3 src/inference.py \
-    --model-dir $SCRATCH/runs/<run_name> \
-    --eval-valid data/eval_input_valid.csv \
-    --eval-anomaly data/eval_input_anomaly.csv \
-    --out-dir submissions/
-```
-
-## Results
-
-### Self-Evaluation (official scorer, held-out split)
-
-| Task | Metric | Random Baseline | Frequency Baseline | Our Model (LSTM+RF) |
-|---|---|---|---|---|
-| Next-step | Top-1 Accuracy | ~0.5% | ~35% | **66.9%** |
-| Next-step | Top-3 Accuracy | ~1.5% | ~50% | **99.2%** |
-| Next-step | Top-5 Accuracy | ~2.5% | ~60% | **100%** |
-| Next-step | MRR | ~0.02 | ~0.42 | **0.83** |
-| Completion | Token Accuracy | ~5% | ~20% | **43.5%** |
-| Completion | Block-level Accuracy | ~15% | ~35% | **70.0%** |
-| Completion | Edit Distance | ~0.95 | ~0.65 | **0.23** |
-| Anomaly | F1 | 0% | 0% | **100%** |
-
-### Per-Family Breakdown
-
-| Family | Top-1 | Top-3 | MRR |
-|---|---|---|---|
-| MOSFET | 70.8% | 99.4% | 0.85 |
-| IGBT | 69.2% | 100% | 0.85 |
-| IC | 60.6% | 98.2% | 0.80 |
-
-### Scaling Analysis
-
-| Model | Parameters | Val Accuracy | Time/Epoch |
-|---|---|---|---|
-| LSTM tiny | 200K | 80.8% | 1.8s |
-| LSTM small | 1.1M | 80.9% | 2.0s |
-| LSTM medium | 6.4M | 80.9% | 11s |
-| Transformer small | 6.4M | 81.6% | 14s |
-| Transformer medium | 33.8M | 80.9% | 350s |
-
-All architectures converge to ~80.9% validation accuracy regardless of size, indicating the ceiling is set by inherent task ambiguity (synonym choices, optional steps) rather than model capacity.
-
-## What Worked
-
-- **RF + neural hybrid**: The Random Forest's 99.9% top-15 recall means the neural model almost never has to rank among impossible candidates. This is the single biggest contributor to our Top-3/5 scores.
-- **Custom tokenizer**: One token per process step eliminates subword noise and gives clean attention patterns.
-- **Small models, fast iteration**: The LSTM small model trains in ~2 minutes on an A100, enabling dozens of experiments.
-- **Physics validator for Task 3**: Using the actual process rules for anomaly detection is both honest and effective.
-
-## What Didn't Work
-
-- **Scaling up**: More parameters, more data, and more epochs all plateau at ~80.9% accuracy. The bottleneck is synonym ambiguity, not model capacity.
-- **Block-based hard masking**: Filtering predictions by process block structure was too aggressive — many steps appear in multiple blocks (e.g., litho steps in via/metal blocks). Dropped Top-1 from 67% to 54%.
-- **Canonicalization**: Merging synonyms improved self-eval numbers but would fail on the organizer's eval set which uses original names.
-
-## What We'd Do With Another 36 Hours
-
-- **Synonym-aware evaluation**: Count predictions as correct if they're valid synonyms of the true answer
-- **Category auxiliary head**: Predict the step's functional category (CLEAN, DEPOSIT, ETCH, etc.) alongside the step itself — transfers better to unseen families
-- **Contrastive learning for anomaly detection**: Train the model to distinguish valid from invalid sequences in embedding space, rather than relying solely on the rule validator
-- **OOD generalization**: Test on the unknown 4th product family using category-level predictions and physics constraints
-
-## Credits & Dependencies
-
-- **Infrastructure**: Leonardo supercomputer (CINECA), NVIDIA A100 GPUs, AI Factory Austria
-- **Libraries**: PyTorch 2.3.1, scikit-learn, numpy, matplotlib
-- **Data**: Synthetic sequences from provided grammar (`generate_sequences.py`)
-- **Physics layer**: Process knowledge base and state machine (Mina's contribution)
-- **Environment**: pixi package manager
-- **AI tools**: Claude Code (Anthropic) for code generation and debugging
+**Track:** Industrial AI (Infineon) — process-sequence learning & benchmarking
+**Team name:** TBD
 
 ---
 
-## Appendix — Bayes ceiling & training injections (this fork's contributions)
+## TL;DR
 
-### Why next-step accuracy plateaus at ~81%
-Measured model-independently (`oracle_ceiling.py`, full write-up in
-`CEILING_ANALYSIS.md`): the generator makes random *valid* choices (documented
-synonyms + optional steps) at ~half of all positions, so the best predictor that
-can exist caps at **Top-1 ≈ 0.82 / Top-5 = 1.000** (0% duplicate sequences → no
-leakage). Models converge to ~98% of that ceiling, so next-token Top-1 is
-*saturated*; we optimize the non-saturated signals — **Task-2 completion, Task-4
-OOD, the physics layer** — and report Top-5/MRR for Task-1.
+We built **procseq** — two from-scratch neural models that *learn* semiconductor
+manufacturing process logic — wrapped in a symbolic **physics verification layer**
+(*"the model proposes, physics disposes"*). A Llama-style **decoder** handles
+next-step prediction and sequence completion; a DeBERTa-style **encoder** with a
+supervised-contrastive objective handles anomaly detection. On held-out evaluation
+it reaches **Top-1 0.77 / Top-5 1.00** next-step accuracy (category-level **0.96**),
+**0.92 block-accuracy completions that are 100% rule-valid**, and an anomaly
+detector that pairs the learned encoder's confidence with a deterministic rule
+engine for an exact in-distribution verdict.
 
-### How the model internalizes the rules (injections, in `jobs/leonardo/train.slurm`)
-- **Next-category aux head** (`--aux-category`) — learn step *function* (transfers OOD).
-- **UNK-dropout** (`--unk-dropout`) — rely on context, not memorized names.
-- **Synonym-collapse loss** (`--synonym-collapse`, `physics/synonyms.py`) — credit
-  any synonym of the gold step; removes coin-flip entropy (outputs stay exact).
-- **Pseudo-family OOD augmentation** (`generate_data.py --ood`, novelty spectrum).
-- **GRPO with the physics verifier as reward** (`src/train_grpo.py`).
-- **Task-2 physics-vetoed beam search** (`refinery.beam_decode`) — −36% edit distance vs greedy.
+---
 
-Reproducible correctness: `exhaustive_test.py` 42/42 · `differential_fuzz.py`
-0 disagreements (incl. casing) · `ood_benchmark.py` · `robustness_test.py`.
+## Problem
+
+Semiconductor fabrication follows strict process routes where **order is logic**:
+you must clean a surface before depositing on it, pattern (litho) before you etch,
+open an implant window before implanting, and test before you ship. The track asks
+whether a model can learn this *hidden logic* — not memorize sequences — across
+three product families (**MOSFET, IGBT, IC**) and generalize to an unseen **4th
+family**, on three tasks:
+
+1. **Next-step prediction** — given a partial route, predict the next step (Top-5).
+2. **Sequence completion** — finish a partially-executed route.
+3. **Anomaly detection** — flag routes that violate the 10 process-logic rules, and
+   attribute the broken rule.
+
+Our angle: **don't fine-tune a generic LLM** — the vocabulary is ~200 atomic process
+steps, so we train *purpose-built* small models from scratch and pair them with a
+symbolic layer that guarantees physical validity rather than hoping the model learns it.
+
+---
+
+## Approach
+
+- **From-scratch decoder (Tasks 1 & 2).** A small Llama-style causal LM over a
+  ~200-token atomic-step vocabulary. Short, strictly-ordered sequences don't need a
+  50K-token pretrained model; a purpose-built one trains fast and predicts the next
+  step / completes the route.
+- **From-scratch encoder + supervised-contrastive (Task 3).** A DeBERTa-style encoder
+  trained with a contrastive objective on hard-negative "twins" (valid routes vs.
+  minimally-broken ones) to *learn* what an anomaly looks like — a neural result, not
+  a hand-written rule.
+- **Physics hybrid — "model proposes, physics disposes."** The learned models are
+  wrapped by a deterministic rule engine + refinery (`refinery.PhysicsRefinery`,
+  `physics.ontology`): Task 1 is re-ranked legal-first, Task 2 uses physics
+  beam-search + repair so **every completion is rule-valid**, and Task 3 takes the
+  rule engine's exact verdict + the encoder's continuous confidence score. The
+  symbolic layer is the **verification companion** — it makes outputs guaranteed-valid
+  and the submission honest.
+- **Where it runs.** Trained on the **Leonardo** A100 cluster (pixi `-e procseq`,
+  `torch==2.3.1` CUDA-12); inference + scoring run anywhere.
+
+---
+
+## How to run it
+
+Full setup, Leonardo runbook, and architecture are in
+[`tracks/industrial-infineon/solution/README.md`](tracks/industrial-infineon/solution/README.md).
+
+```bash
+git clone https://github.com/thuber19/zero_one_hack_01.git
+cd zero_one_hack_01
+pip install -r requirements.txt          # procseq deps (torch, transformers, accelerate, …)
+
+cd tracks/industrial-infineon/solution
+make smoke                               # CPU, ~30s: unit tests + tiny train + infer + score → "SMOKE OK"
+
+# Full pipeline (GPU; Leonardo): train both models, infer all 3 tasks, score
+python -m procseq.run_all --config configs/leonardo_decoder.yaml
+# inference-only on existing checkpoints:
+python -m procseq.run_all --config configs/leonardo_decoder.yaml --skip-train
+```
+
+**Needs:** a CUDA GPU for full training (we used Leonardo A100s). No API keys, no
+external datasets — the synthetic data is generated in-repo from the organizer's
+`generate_sequences.py`. Trained checkpoints (~210 MB) exceed GitHub's 100 MB
+file limit and are therefore **not committed**; they are reproduced by the command
+above, and the produced **submission CSVs, scores, and training logs are committed**
+under [`tracks/industrial-infineon/solution/artifacts/`](tracks/industrial-infineon/solution/artifacts/).
+
+---
+
+## Results
+
+Scores from the official `data/eval_metrics.py` on a **held-out self-eval split**
+(600 valid routes, 987 anomaly routes). The submitted CSVs are the same models'
+predictions on the **organizer eval inputs** (`*_real`), in `solution/artifacts/`.
+Raw scores: [`solution/artifacts/metrics.json`](tracks/industrial-infineon/solution/artifacts/metrics.json).
+
+### Task 1 — Next-step prediction (learned decoder, legal-first reranked)
+| Metric | Score |
+|---|---|
+| **Top-1** | **0.772** |
+| Top-3 | 0.995 |
+| **Top-5** | **1.000** |
+| MRR | 0.883 |
+| Category Top-1 (right *operation*) | **0.963** |
+| Category MRR | 0.981 |
+
+**Baseline:** random next-step over ~200 tokens ≈ 0.005 Top-1; a frequency/bigram
+baseline is far below 0.77. The 0.96 category accuracy shows the model learns the
+*operation* (deposit / etch / clean…), not just the surface token.
+
+### Task 2 — Sequence completion
+| Metric | Score |
+|---|---|
+| **Block-level accuracy** | **0.919** |
+| **Logic validity (rule-valid completions)** | **1.000** |
+| Category-token accuracy | 0.749 |
+| Token accuracy | 0.567 |
+| Exact-match | 0.142 |
+
+Physics beam-search + repair guarantees **100% rule-valid** completions; block
+accuracy 0.92 shows they're structurally right. Exact full-sequence match is low
+(0.14) because many valid completions differ only by interchangeable steps.
+
+### Task 3 — Anomaly detection (honest split)
+| Variant | Binary acc | F1 | ROC-AUC | Rule attribution |
+|---|---|---|---|---|
+| Learned encoder (alone) | 0.590 | 0.453 | 0.611 | 0.140 |
+| **Physics hybrid (submitted)** | **1.000** | — | — | **exact (rule engine)** |
+
+**This is the honest core of our anomaly story:** the *learned* encoder alone is only
+≈ chance — anomaly is the hardest task and our from-scratch encoder did not crack it.
+So the **submission uses the physics hybrid**: the deterministic rule engine supplies
+the exact in-distribution verdict + broken-rule attribution, and the encoder supplies
+a continuous confidence score. See *A note on honesty* below.
+
+---
+
+## What worked
+
+- **The decoder genuinely learned the logic.** Top-5 1.00 and **0.96 category
+  accuracy** are strong from-scratch results — it predicts the right *operation*, not
+  just a memorized token.
+- **Guaranteed-valid completions.** Physics-vetoed beam search + repair → **100%** of
+  Task-2 completions satisfy all 10 rules, with 0.92 block accuracy.
+- **A clean neuro-symbolic seam.** The learned models and the rule engine compose
+  through one interface (`infer_hybrid` / `infer_anomaly_hybrid`), so we get learned
+  flexibility *and* deterministic safety without retraining.
+
+## What didn't work
+
+- **The learned anomaly encoder.** ≈ chance (AUC 0.61, F1 0.45) — supervised-contrastive
+  on hard-negative twins did not, at this scale/step budget, beat the rule engine. We
+  ship the hybrid and report the encoder's weakness rather than hide it.
+- **Exact-match completion** is low (0.14) — expected given interchangeable steps, but
+  it means we optimize block/validity rather than exact-match.
+- **OOD on the hidden 4th family is unmeasured** at submission time (see below) — the
+  rule engine's in-distribution near-perfection will *not* transfer to keyword-free
+  novel vocabulary.
+
+## What you'd do with another 36 hours
+
+- Train **two larger model sizes / more steps** to extend a scaling curve (current run:
+  `base`, 16k steps, 20k seqs/family).
+- **Strengthen the encoder** with an ontology *input channel* (feed each step's physical
+  category into the model) so it reads — and flags — a family it never tokenized.
+- Run `procseq/ood_novel.py` on the trained checkpoints to produce the **novel-family
+  OOD curve** (rename fraction 0.0 → 0.5 → 1.0) — the honest generalization number.
+- Calibrate the hybrid Task-3 score and add a per-family breakdown to `metrics.json`.
+
+---
+
+## Track-specific deliverables (Industrial AI)
+
+- [x] Eval submission files in `tracks/industrial-infineon/solution/artifacts/`:
+  `nextstep.csv` (600), `completion.csv` (600), `anomaly.csv` (987) — predictions on
+  the organizer eval inputs (best variant per task; raw per-variant CSVs in `artifacts/raw/`).
+- [x] Training logs / loss curves: `artifacts/tb_logs/{decoder,encoder}/`
+  (view with `tensorboard --logdir artifacts/tb_logs`).
+- [~] Checkpoints: ~210 MB (decoder `model.safetensors`, encoder `pytorch_model.bin`) —
+  **exceed GitHub's 100 MB limit**, reproduced via `run_all` (not committed raw).
+- [x] Scores from `eval_metrics.py` on all three tasks: `artifacts/metrics.json`.
+- [~] Per-family breakdown: aggregate scores committed; per-family split is a known gap
+  (next step above).
+- [ ] **Demo video (≤2 min): pending** — shows baseline vs. hybrid on identical inputs.
+
+---
+
+## Credits & dependencies
+
+- **Open-source libraries:** PyTorch 2.3.1 (CUDA 12), Transformers ≥4.44, Accelerate
+  ≥0.33, Tokenizers ≥0.19, TensorBoard, NumPy, scikit-learn, Matplotlib, PyYAML.
+- **Pre-trained models:** **none** — both models trained from scratch (architectures
+  only: Llama-style decoder, DeBERTa-style encoder).
+- **External APIs:** none.
+- **AI coding assistants used during the hackathon:** Claude Code.
+- **Datasets:** organizer-provided synthetic process sequences
+  (`data/generate_sequences.py` + the MOSFET/IGBT/IC variant CSVs), generated in-repo.
+- **Compute:** CINECA **Leonardo** A100 cluster.
+
+---
+
+## A note on honesty
+
+- **Reported numbers are held-out self-eval, not the organizer's hidden test.** The
+  submitted CSVs are our models' predictions on the organizer eval inputs; we cannot
+  see those labels, so the tables above are our best honest estimate from a held-out split.
+- **Task 3 is carried by the rule engine, not the learned encoder.** The encoder alone
+  is ≈ chance (AUC 0.61). The hybrid's near-perfect in-distribution accuracy comes from
+  the deterministic 10-rule checker; because that checker shares its rule definitions
+  with the data generator, its in-distribution score is strong **by construction** and
+  will **not** hold on a genuinely novel 4th family. We present the learned encoder's
+  real (weak) number alongside the hybrid so this is explicit.
+- **Nothing in the pipeline is mocked or hardcoded** beyond the deterministic rule
+  engine (intentional and exact). Training, inference, and scoring are real.
+
+---
+
+*Submitted by team TBD for Zero One Hack_01, May 2026.*

@@ -4,8 +4,15 @@ __pycache__/
 *.pyc
 *.egg-info/
 
-# Run artifacts (checkpoints, predictions, plots, tensorboard)
-artifacts/
+# Run artifacts (checkpoints, predictions, plots, tensorboard).
+# Ignore bulk output, but DO commit the submission deliverables + scores + logs.
+artifacts/*
+!artifacts/nextstep.csv
+!artifacts/completion.csv
+!artifacts/anomaly.csv
+!artifacts/metrics.json
+!artifacts/raw/
+!artifacts/tb_logs/
 runs/
 logs/
 wandb/
