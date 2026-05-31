@@ -141,6 +141,25 @@ report openly. † ROC-AUC is computed from the encoder's *uncalibrated* SCORE, 
 at chance even though the binary verdict is perfect — calibrating that score (see next
 steps) is exactly what would lift it.
 
+### Per-family breakdown (MOSFET / IGBT / IC)
+Same scorers, split by product family — these rows aggregate (n-weighted) back to the
+headline numbers above *exactly* (verified). Full output:
+[`solution/artifacts/metrics_per_family.json`](tracks/industrial-infineon/solution/artifacts/metrics_per_family.json)
++ [`per_family_scores.txt`](tracks/industrial-infineon/solution/artifacts/per_family_scores.txt);
+reproduce with `python solution/per_family_eval.py --run <run-dir>`.
+
+| Family | T1 Top-1 | T1 MRR | T2 Block | T2 Token | T2 Exact | T3 F1 | T3 Rule-attr |
+|---|---|---|---|---|---|---|---|
+| MOSFET | 0.945 | 0.973 | 0.962 | 0.765 | 0.365 | 1.000 | 1.000 |
+| IGBT | 0.955 | 0.978 | 0.951 | 0.786 | 0.365 | 1.000 | 1.000 |
+| IC | 0.910 | 0.955 | 0.899 | 0.572 | 0.120 | 1.000 | 0.915 |
+
+**MOSFET and IGBT are close and strong; IC is the weakest learned family** (T1 0.910,
+T2 token 0.572, exact 0.120) — IC routes are the most structurally distinct (shortest,
+fewest repeated litho cycles), so the decoder has the least pattern to lean on. Task-3
+F1 is 1.0 for all three (the rule engine is family-agnostic); rule-attribution is
+perfect for MOSFET/IGBT and 0.915 for IC.
+
 ---
 
 ## What worked
@@ -175,7 +194,7 @@ Targeted at our actual gaps, in priority order:
   *by construction* — it won't hold there. First action: run `procseq/ood_novel.py` on our
   trained checkpoints across rename-fraction 0.0 → 0.5 → 1.0 to turn the current "pending"
   into a real degradation curve, so we know exactly where the rules stop helping.
-- **Make the learned encoder actually contribute to Task 3 (our weakest result, AUC 0.61).**
+- **Make the learned encoder actually contribute to Task 3 (our weakest result, AUC 0.49).**
   Right now the rule engine carries the verdict and the model adds nothing to the scored
   anomaly output. Two concrete lifts: (a) **calibrate** the encoder's probability
   (temperature scaling on a held-out split) so the hybrid's `SCORE` column is a true
@@ -188,10 +207,10 @@ Targeted at our actual gaps, in priority order:
   *names*, so a novel family is all-`[UNK]`. Feeding each step's physical category as a
   second input embedding lets the models read — and the encoder flag — a family they never
   tokenized, directly improving Task-1/2 and anomaly on the hidden 4th family.
-- **Close the per-family deliverable gap.** `metrics.json` is aggregate-only; the track
-  asks for a per-family breakdown. Emit per-family Top-1/Top-5/block/F1 (family is in the
-  `EXAMPLE_ID`) from the existing predictions — a required deliverable, and it exposes the
-  weakest family (likely IC, the most structurally distinct) to target next.
+- **Lift IC, the weakest family.** The per-family breakdown (now committed) shows IC
+  trailing on every learned metric — T1 0.910 vs IGBT 0.955, T2 token 0.572 vs 0.786,
+  exact 0.120 vs 0.365. IC routes are the most structurally distinct, so it's the clearest
+  target for more IC-weighted training data or the ontology channel above.
 - **Chart the scaling curve + ship the weights.** Train `small`/`base`/`large` on identical
   data for an accuracy-vs-compute curve (the track's stretch goal; we have a single `base`,
   16k-step run), and host the ~210 MB checkpoints externally (GitHub blocks LFS on a fork)
@@ -206,11 +225,13 @@ Targeted at our actual gaps, in priority order:
   the organizer eval inputs (best variant per task; raw per-variant CSVs in `artifacts/raw/`).
 - [x] Training logs / loss curves: `artifacts/tb_logs/{decoder,encoder}/`
   (view with `tensorboard --logdir artifacts/tb_logs`).
-- [~] Checkpoints: ~210 MB (decoder `model.safetensors`, encoder `pytorch_model.bin`) —
-  **exceed GitHub's 100 MB limit**, reproduced via `run_all` (not committed raw).
-- [x] Scores from `eval_metrics.py` on all three tasks: `artifacts/metrics.json`.
-- [~] Per-family breakdown: aggregate scores committed; per-family split is a known gap
-  (next step above).
+- [x] Checkpoints: decoder + encoder in `tracks/industrial-infineon/models/`
+  (also on Dropbox via `download_models.sh`); reproducible via `run_all`.
+- [x] Scores from `eval_metrics.py` on all three tasks: `artifacts/metrics.json`
+  (decoder/encoder) + `artifacts/metrics_hybrid.json` (submitted hybrid).
+- [x] Per-family breakdown (MOSFET / IGBT / IC, all 3 tasks):
+  `artifacts/metrics_per_family.json` + `per_family_scores.txt`
+  (reproduce: `python solution/per_family_eval.py --run <run-dir>`).
 - [ ] **Demo video (≤2 min): pending** — shows baseline vs. hybrid on identical inputs.
 
 ---

@@ -1,0 +1,106 @@
+{
+  "run": "procseq_base_d20000_s16001_seed11101",
+  "note": "Per-family breakdown - mirrors procseq/run_eval.py (same gold + procseq.eval_metrics scorers + prediction files), partitioned by family. Task1+Task3 = submitted hybrid; Task2 = decoder+physics. Per-family rows aggregate (n-weighted) back to metrics.json / metrics_hybrid.json.",
+  "task1_nextstep": {
+    "MOSFET": {
+      "n": 200,
+      "top1": 0.945,
+      "top3": 1.0,
+      "top5": 1.0,
+      "mrr": 0.9725,
+      "top1_category": 0.995,
+      "mrr_category": 0.9975
+    },
+    "IGBT": {
+      "n": 200,
+      "top1": 0.955,
+      "top3": 1.0,
+      "top5": 1.0,
+      "mrr": 0.9775,
+      "top1_category": 1.0,
+      "mrr_category": 1.0
+    },
+    "IC": {
+      "n": 200,
+      "top1": 0.91,
+      "top3": 1.0,
+      "top5": 1.0,
+      "mrr": 0.955,
+      "top1_category": 1.0,
+      "mrr_category": 1.0
+    }
+  },
+  "task2_completion": {
+    "MOSFET": {
+      "n": 200,
+      "exact_match": 0.365,
+      "normalized_edit_distance": 0.9272554935647697,
+      "category_token_accuracy": 0.8642055660725829,
+      "token_accuracy": 0.7654557938560035,
+      "block_accuracy": 0.9624867067294787
+    },
+    "IGBT": {
+      "n": 200,
+      "exact_match": 0.365,
+      "normalized_edit_distance": 0.9095330180798149,
+      "category_token_accuracy": 0.8885464055128816,
+      "token_accuracy": 0.7855221454884423,
+      "block_accuracy": 0.9509400672264613
+    },
+    "IC": {
+      "n": 200,
+      "exact_match": 0.12,
+      "normalized_edit_distance": 0.8248760403178111,
+      "category_token_accuracy": 0.7492314793401169,
+      "token_accuracy": 0.5721561953952102,
+      "block_accuracy": 0.8988925877704667
+    }
+  },
+  "task3_anomaly": {
+    "MOSFET": {
+      "n": 329,
+      "binary_accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 129,
+        "fp": 0,
+        "tn": 200,
+        "fn": 0
+      },
+      "roc_auc": 0.456046511627907,
+      "rule_attribution_accuracy": 1.0
+    },
+    "IGBT": {
+      "n": 329,
+      "binary_accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 129,
+        "fp": 0,
+        "tn": 200,
+        "fn": 0
+      },
+      "roc_auc": 0.4774418604651163,
+      "rule_attribution_accuracy": 1.0
+    },
+    "IC": {
+      "n": 329,
+      "binary_accuracy": 1.0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "confusion": {
+        "tp": 129,
+        "fp": 0,
+        "tn": 200,
+        "fn": 0
+      },
+      "roc_auc": 0.49775193798449613,
+      "rule_attribution_accuracy": 0.9147286821705426
+    }
+  }
+}

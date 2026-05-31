@@ -67,6 +67,19 @@ Source of truth: [`solution/artifacts/metrics.json`](solution/artifacts/metrics.
 > Task 3's verdict is the deterministic rule engine (exact in-distribution by
 > construction); the learned encoder alone is ≈ chance — we report both. See `REPORT.md`.
 
+### Per-family (MOSFET / IGBT / IC)
+
+| Family | T1 Top-1 | T2 Block | T2 Token | T3 F1 | T3 Rule-attr |
+|---|---|---|---|---|---|
+| MOSFET | 0.945 | 0.962 | 0.765 | 1.000 | 1.000 |
+| IGBT | 0.955 | 0.951 | 0.786 | 1.000 | 1.000 |
+| IC | 0.910 | 0.899 | 0.572 | 1.000 | 0.915 |
+
+IC is the weakest learned family (most structurally distinct). Full output:
+[`solution/artifacts/metrics_per_family.json`](solution/artifacts/metrics_per_family.json)
++ [`per_family_scores.txt`](solution/artifacts/per_family_scores.txt)
+(reproduce: `python solution/per_family_eval.py --run <run-dir>`).
+
 ## Training on Leonardo
 
 ```bash

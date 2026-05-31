@@ -204,5 +204,5 @@ All per-task variants (self-eval + `_real`, pure vs. hybrid) are in `artifacts/r
 - [x] `anomaly.csv` → `artifacts/anomaly.csv` (987 rows)
 - [~] Training artifacts: checkpoints ~210 MB > GitHub 100 MB limit → reproduced via `run_all` (not committed raw); logs committed
 - [x] Training logs and loss curves in `artifacts/tb_logs/`
-- [x] `eval_metrics.py` scores in `artifacts/metrics.json` (aggregate; per-family breakdown is a known gap — see REPORT)
+- [x] `eval_metrics.py` scores: `artifacts/metrics.json` + `metrics_hybrid.json` (aggregate), `metrics_per_family.json` + `per_family_scores.txt` (per-family MOSFET/IGBT/IC, all 3 tasks)
 - [ ] Demo video (≤2 min): **pending** — shows baseline vs. hybrid on identical inputs

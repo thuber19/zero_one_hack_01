@@ -1,0 +1,16 @@
+Per-family breakdown - run procseq_base_d20000_s16001_seed11101
+
+TASK 1  next-step (hybrid)      n   Top-1  Top-5   MRR   cat-T1
+  MOSFET                   200  0.945  1.000  0.973  0.995
+  IGBT                     200  0.955  1.000  0.978  1.000
+  IC                       200  0.910  1.000  0.955  1.000
+
+TASK 2  completion              n   block  token  cat-tok  exact
+  MOSFET                   200  0.962  0.765  0.864   0.365
+  IGBT                     200  0.951  0.786  0.889   0.365
+  IC                       200  0.899  0.572  0.749   0.120
+
+TASK 3  anomaly (hybrid)        n   binAcc  F1    ruleAttr
+  MOSFET                   329  1.000   1.000  1.000
+  IGBT                     329  1.000   1.000  1.000
+  IC                       329  1.000   1.000  0.915
