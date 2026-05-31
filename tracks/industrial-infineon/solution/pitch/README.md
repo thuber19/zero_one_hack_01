@@ -35,7 +35,7 @@ the `.pptx` directly in PowerPoint if you only need the deliverable.
 
 ## Notes on the numbers
 All metrics are the **real, official-scorer** results from the completed ProcSeq
-Leonardo run (`procseq_base_d20000_s16000`), held-out self-eval — see
+Leonardo run (`procseq_base_d20000_s16001_seed11101`), held-out self-eval — see
 [`../artifacts/metrics.json`](../artifacts/metrics.json) and the root
 [`REPORT.md`](../../../../REPORT.md). Slide 6 states the provenance + honest limits
-(learned anomaly encoder is weak; the physics hybrid carries Task 3).
+(the learned anomaly encoder collapsed, F1 0.0; the physics hybrid carries Task 3).

@@ -184,7 +184,7 @@ Targeted at our actual gaps, in priority order:
   to push AUC above chance *where the rules can't fire* — i.e., on OOD, the only place its
   value is real.
 - **Add the ontology input channel — highest-leverage fix for the OOD gap.** We already
-  show the decoder learns the *operation* (0.963 next-category) but it tokenizes raw step
+  show the decoder learns the *operation* (0.998 next-category) but it tokenizes raw step
   *names*, so a novel family is all-`[UNK]`. Feeding each step's physical category as a
   second input embedding lets the models read — and the encoder flag — a family they never
   tokenized, directly improving Task-1/2 and anomaly on the hidden 4th family.

@@ -175,7 +175,7 @@ This runs unit tests, generates tiny synthetic data, trains both models for 5
 steps, runs inference on all three tasks, and scores them.  Expected final line:
 `SMOKE OK`.  No GPU required; completes on a laptop CPU in ~30 seconds.
 
-### Submission CSVs (committed — from the `procseq_base_d20000_s16000` run)
+### Submission CSVs (committed — from the `procseq_base_d20000_s16001_seed11101` run)
 
 The three submission files (predictions on the organizer eval inputs, best variant
 per task) are committed at:
