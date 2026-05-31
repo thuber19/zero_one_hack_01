@@ -1,0 +1,1098 @@
+{
+  "batch_id": "batch_bad_001",
+  "predicted_yield": 0.614,
+  "confidence": 0.73,
+  "risk_steps_detected": 17,
+  "anomalous_batches": 3,
+  "per_step": [
+    {
+      "step_id": "s000",
+      "step_name": "WAFER_CLEAN",
+      "risk_score": 0.12,
+      "confidence_lo": 0.04,
+      "confidence_hi": 0.2,
+      "shap": []
+    },
+    {
+      "step_id": "s001",
+      "step_name": "GATE_OXIDE_GROWTH",
+      "risk_score": 0.81,
+      "confidence_lo": 0.73,
+      "confidence_hi": 0.89,
+      "shap": [
+        {
+          "feature": "temp_celsius",
+          "value": 1052.0,
+          "contribution": 0.38
+        },
+        {
+          "feature": "duration_min",
+          "value": 45.0,
+          "contribution": 0.21
+        },
+        {
+          "feature": "o2_flow_sccm",
+          "value": 310.0,
+          "contribution": 0.15
+        }
+      ]
+    },
+    {
+      "step_id": "s002",
+      "step_name": "POLY_DEPOSITION",
+      "risk_score": 0.18,
+      "confidence_lo": 0.1,
+      "confidence_hi": 0.26,
+      "shap": []
+    },
+    {
+      "step_id": "s003",
+      "step_name": "LITHO_GATE",
+      "risk_score": 0.75,
+      "confidence_lo": 0.67,
+      "confidence_hi": 0.83,
+      "shap": [
+        {
+          "feature": "focus_offset_nm",
+          "value": 12.5,
+          "contribution": 0.34
+        },
+        {
+          "feature": "dose_mJ",
+          "value": 22.1,
+          "contribution": 0.19
+        },
+        {
+          "feature": "overlay_nm",
+          "value": 4.2,
+          "contribution": 0.14
+        }
+      ]
+    },
+    {
+      "step_id": "s004",
+      "step_name": "ETCH_POLY",
+      "risk_score": 0.22,
+      "confidence_lo": 0.14,
+      "confidence_hi": 0.3,
+      "shap": []
+    },
+    {
+      "step_id": "s005",
+      "step_name": "SPACER_DEPOSITION",
+      "risk_score": 0.09,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.17,
+      "shap": []
+    },
+    {
+      "step_id": "s006",
+      "step_name": "SOURCE_DRAIN_IMPLANT",
+      "risk_score": 0.78,
+      "confidence_lo": 0.7,
+      "confidence_hi": 0.86,
+      "shap": [
+        {
+          "feature": "dose_ions_cm2",
+          "value": 2100000000000000.0,
+          "contribution": 0.41
+        },
+        {
+          "feature": "energy_keV",
+          "value": 30.0,
+          "contribution": 0.22
+        },
+        {
+          "feature": "tilt_deg",
+          "value": 7.0,
+          "contribution": 0.08
+        }
+      ]
+    },
+    {
+      "step_id": "s007",
+      "step_name": "RTP_ANNEAL",
+      "risk_score": 0.33,
+      "confidence_lo": 0.25,
+      "confidence_hi": 0.41,
+      "shap": []
+    },
+    {
+      "step_id": "s008",
+      "step_name": "SILICIDE_FORMATION",
+      "risk_score": 0.62,
+      "confidence_lo": 0.54,
+      "confidence_hi": 0.7,
+      "shap": []
+    },
+    {
+      "step_id": "s009",
+      "step_name": "PRE_METAL_DIELECTRIC",
+      "risk_score": 0.14,
+      "confidence_lo": 0.06,
+      "confidence_hi": 0.22,
+      "shap": []
+    },
+    {
+      "step_id": "s010",
+      "step_name": "CMP_OXIDE",
+      "risk_score": 0.88,
+      "confidence_lo": 0.8,
+      "confidence_hi": 0.96,
+      "shap": [
+        {
+          "feature": "pressure_psi",
+          "value": 4.2,
+          "contribution": 0.45
+        },
+        {
+          "feature": "platen_speed_rpm",
+          "value": 87.0,
+          "contribution": 0.28
+        },
+        {
+          "feature": "slurry_flow_ml_min",
+          "value": 200.0,
+          "contribution": 0.17
+        }
+      ]
+    },
+    {
+      "step_id": "s011",
+      "step_name": "W_PLUG_DEPOSITION",
+      "risk_score": 0.27,
+      "confidence_lo": 0.19,
+      "confidence_hi": 0.35,
+      "shap": []
+    },
+    {
+      "step_id": "s012",
+      "step_name": "M1_LITHO",
+      "risk_score": 0.76,
+      "confidence_lo": 0.68,
+      "confidence_hi": 0.84,
+      "shap": [
+        {
+          "feature": "focus_offset_nm",
+          "value": 9.8,
+          "contribution": 0.31
+        },
+        {
+          "feature": "dose_mJ",
+          "value": 24.5,
+          "contribution": 0.22
+        },
+        {
+          "feature": "cd_nm",
+          "value": 65.0,
+          "contribution": 0.16
+        }
+      ]
+    },
+    {
+      "step_id": "s013",
+      "step_name": "M1_ETCH",
+      "risk_score": 0.19,
+      "confidence_lo": 0.11,
+      "confidence_hi": 0.27,
+      "shap": []
+    },
+    {
+      "step_id": "s014",
+      "step_name": "M1_CMP",
+      "risk_score": 0.73,
+      "confidence_lo": 0.65,
+      "confidence_hi": 0.81,
+      "shap": [
+        {
+          "feature": "pressure_psi",
+          "value": 3.9,
+          "contribution": 0.36
+        },
+        {
+          "feature": "removal_rate_nm_min",
+          "value": 145.0,
+          "contribution": 0.24
+        },
+        {
+          "feature": "non_uniformity_pct",
+          "value": 4.1,
+          "contribution": 0.18
+        }
+      ]
+    },
+    {
+      "step_id": "s015",
+      "step_name": "BARRIER_DEPOSITION",
+      "risk_score": 0.11,
+      "confidence_lo": 0.03,
+      "confidence_hi": 0.19,
+      "shap": []
+    },
+    {
+      "step_id": "s016",
+      "step_name": "CU_SEED_LAYER",
+      "risk_score": 0.23,
+      "confidence_lo": 0.15,
+      "confidence_hi": 0.31,
+      "shap": []
+    },
+    {
+      "step_id": "s017",
+      "step_name": "CU_ELECTROPLATING",
+      "risk_score": 0.84,
+      "confidence_lo": 0.76,
+      "confidence_hi": 0.92,
+      "shap": [
+        {
+          "feature": "current_density_mA_cm2",
+          "value": 18.5,
+          "contribution": 0.42
+        },
+        {
+          "feature": "bath_temp_c",
+          "value": 25.3,
+          "contribution": 0.19
+        },
+        {
+          "feature": "additive_conc_ppm",
+          "value": 52.0,
+          "contribution": 0.14
+        }
+      ]
+    },
+    {
+      "step_id": "s018",
+      "step_name": "CU_CMP",
+      "risk_score": 0.16,
+      "confidence_lo": 0.08,
+      "confidence_hi": 0.24,
+      "shap": []
+    },
+    {
+      "step_id": "s019",
+      "step_name": "V1_LITHO",
+      "risk_score": 0.77,
+      "confidence_lo": 0.69,
+      "confidence_hi": 0.85,
+      "shap": [
+        {
+          "feature": "overlay_nm",
+          "value": 5.8,
+          "contribution": 0.39
+        },
+        {
+          "feature": "cd_nm",
+          "value": 55.0,
+          "contribution": 0.25
+        },
+        {
+          "feature": "dose_mJ",
+          "value": 23.0,
+          "contribution": 0.11
+        }
+      ]
+    },
+    {
+      "step_id": "s020",
+      "step_name": "V1_ETCH",
+      "risk_score": 0.28,
+      "confidence_lo": 0.2,
+      "confidence_hi": 0.36,
+      "shap": []
+    },
+    {
+      "step_id": "s021",
+      "step_name": "M2_DEPOSITION",
+      "risk_score": 0.15,
+      "confidence_lo": 0.07,
+      "confidence_hi": 0.23,
+      "shap": []
+    },
+    {
+      "step_id": "s022",
+      "step_name": "M2_LITHO",
+      "risk_score": 0.79,
+      "confidence_lo": 0.71,
+      "confidence_hi": 0.87,
+      "shap": [
+        {
+          "feature": "focus_offset_nm",
+          "value": 11.2,
+          "contribution": 0.33
+        },
+        {
+          "feature": "dose_mJ",
+          "value": 25.8,
+          "contribution": 0.24
+        },
+        {
+          "feature": "mask_align_nm",
+          "value": 6.1,
+          "contribution": 0.14
+        }
+      ]
+    },
+    {
+      "step_id": "s023",
+      "step_name": "M2_ETCH",
+      "risk_score": 0.21,
+      "confidence_lo": 0.13,
+      "confidence_hi": 0.29,
+      "shap": []
+    },
+    {
+      "step_id": "s024",
+      "step_name": "M2_CMP",
+      "risk_score": 0.35,
+      "confidence_lo": 0.27,
+      "confidence_hi": 0.43,
+      "shap": []
+    },
+    {
+      "step_id": "s025",
+      "step_name": "V2_LITHO",
+      "risk_score": 0.08,
+      "confidence_lo": 0.0,
+      "confidence_hi": 0.16,
+      "shap": []
+    },
+    {
+      "step_id": "s026",
+      "step_name": "V2_ETCH",
+      "risk_score": 0.64,
+      "confidence_lo": 0.56,
+      "confidence_hi": 0.72,
+      "shap": []
+    },
+    {
+      "step_id": "s027",
+      "step_name": "M3_DEPOSITION",
+      "risk_score": 0.17,
+      "confidence_lo": 0.09,
+      "confidence_hi": 0.25,
+      "shap": []
+    },
+    {
+      "step_id": "s028",
+      "step_name": "M3_LITHO",
+      "risk_score": 0.13,
+      "confidence_lo": 0.05,
+      "confidence_hi": 0.21,
+      "shap": []
+    },
+    {
+      "step_id": "s029",
+      "step_name": "M3_ETCH",
+      "risk_score": 0.25,
+      "confidence_lo": 0.17,
+      "confidence_hi": 0.33,
+      "shap": []
+    },
+    {
+      "step_id": "s030",
+      "step_name": "M3_CMP",
+      "risk_score": 0.74,
+      "confidence_lo": 0.66,
+      "confidence_hi": 0.82,
+      "shap": [
+        {
+          "feature": "pressure_psi",
+          "value": 4.5,
+          "contribution": 0.38
+        },
+        {
+          "feature": "platen_speed_rpm",
+          "value": 92.0,
+          "contribution": 0.22
+        },
+        {
+          "feature": "dishing_nm",
+          "value": 12.0,
+          "contribution": 0.16
+        }
+      ]
+    },
+    {
+      "step_id": "s031",
+      "step_name": "PASSIVATION_DEPOSITION",
+      "risk_score": 0.1,
+      "confidence_lo": 0.02,
+      "confidence_hi": 0.18,
+      "shap": []
+    },
+    {
+      "step_id": "s032",
+      "step_name": "PASSIVATION_LITHO",
+      "risk_score": 0.26,
+      "confidence_lo": 0.18,
+      "confidence_hi": 0.34,
+      "shap": []
+    },
+    {
+      "step_id": "s033",
+      "step_name": "PASSIVATION_ETCH",
+      "risk_score": 0.18,
+      "confidence_lo": 0.1,
+      "confidence_hi": 0.26,
+      "shap": []
+    },
+    {
+      "step_id": "s034",
+      "step_name": "PAD_METAL_DEPOSITION",
+      "risk_score": 0.82,
+      "confidence_lo": 0.74,
+      "confidence_hi": 0.9,
+      "shap": [
+        {
+          "feature": "al_thickness_nm",
+          "value": 500.0,
+          "contribution": 0.4
+        },
+        {
+          "feature": "sputter_power_W",
+          "value": 8000.0,
+          "contribution": 0.26
+        },
+        {
+          "feature": "substrate_temp_c",
+          "value": 250.0,
+          "contribution": 0.13
+        }
+      ]
+    },
+    {
+      "step_id": "s035",
+      "step_name": "PAD_LITHO",
+      "risk_score": 0.31,
+      "confidence_lo": 0.23,
+      "confidence_hi": 0.39,
+      "shap": []
+    },
+    {
+      "step_id": "s036",
+      "step_name": "PAD_ETCH",
+      "risk_score": 0.14,
+      "confidence_lo": 0.06,
+      "confidence_hi": 0.22,
+      "shap": []
+    },
+    {
+      "step_id": "s037",
+      "step_name": "BACKEND_CLEAN",
+      "risk_score": 0.07,
+      "confidence_lo": 0.0,
+      "confidence_hi": 0.15,
+      "shap": []
+    },
+    {
+      "step_id": "s038",
+      "step_name": "DIELECTRIC_ETCH",
+      "risk_score": 0.65,
+      "confidence_lo": 0.57,
+      "confidence_hi": 0.73,
+      "shap": []
+    },
+    {
+      "step_id": "s039",
+      "step_name": "WAFER_BACKSIDE_GRIND",
+      "risk_score": 0.29,
+      "confidence_lo": 0.21,
+      "confidence_hi": 0.37,
+      "shap": []
+    },
+    {
+      "step_id": "s040",
+      "step_name": "ACTIVE_REGION_IMPLANT",
+      "risk_score": 0.2,
+      "confidence_lo": 0.12,
+      "confidence_hi": 0.28,
+      "shap": []
+    },
+    {
+      "step_id": "s041",
+      "step_name": "WELL_FORMATION",
+      "risk_score": 0.11,
+      "confidence_lo": 0.03,
+      "confidence_hi": 0.19,
+      "shap": []
+    },
+    {
+      "step_id": "s042",
+      "step_name": "SHALLOW_TRENCH_LITHO",
+      "risk_score": 0.8,
+      "confidence_lo": 0.72,
+      "confidence_hi": 0.88,
+      "shap": [
+        {
+          "feature": "cd_nm",
+          "value": 90.0,
+          "contribution": 0.38
+        },
+        {
+          "feature": "focus_offset_nm",
+          "value": 8.5,
+          "contribution": 0.26
+        },
+        {
+          "feature": "overlay_nm",
+          "value": 3.9,
+          "contribution": 0.13
+        }
+      ]
+    },
+    {
+      "step_id": "s043",
+      "step_name": "SHALLOW_TRENCH_ETCH",
+      "risk_score": 0.24,
+      "confidence_lo": 0.16,
+      "confidence_hi": 0.32,
+      "shap": []
+    },
+    {
+      "step_id": "s044",
+      "step_name": "LINER_OXIDATION",
+      "risk_score": 0.16,
+      "confidence_lo": 0.08,
+      "confidence_hi": 0.24,
+      "shap": []
+    },
+    {
+      "step_id": "s045",
+      "step_name": "STI_FILL_CVD",
+      "risk_score": 0.13,
+      "confidence_lo": 0.05,
+      "confidence_hi": 0.21,
+      "shap": []
+    },
+    {
+      "step_id": "s046",
+      "step_name": "STI_CMP",
+      "risk_score": 0.67,
+      "confidence_lo": 0.59,
+      "confidence_hi": 0.75,
+      "shap": []
+    },
+    {
+      "step_id": "s047",
+      "step_name": "NWELL_IMPLANT",
+      "risk_score": 0.22,
+      "confidence_lo": 0.14,
+      "confidence_hi": 0.3,
+      "shap": []
+    },
+    {
+      "step_id": "s048",
+      "step_name": "PWELL_IMPLANT",
+      "risk_score": 0.17,
+      "confidence_lo": 0.09,
+      "confidence_hi": 0.25,
+      "shap": []
+    },
+    {
+      "step_id": "s049",
+      "step_name": "WELL_ANNEAL",
+      "risk_score": 0.09,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.17,
+      "shap": []
+    },
+    {
+      "step_id": "s050",
+      "step_name": "SCREEN_OXIDE_GROWTH",
+      "risk_score": 0.65,
+      "confidence_lo": 0.57,
+      "confidence_hi": 0.73,
+      "shap": []
+    },
+    {
+      "step_id": "s051",
+      "step_name": "THRESHOLD_ADJUST_IMPLANT",
+      "risk_score": 0.28,
+      "confidence_lo": 0.2,
+      "confidence_hi": 0.36,
+      "shap": []
+    },
+    {
+      "step_id": "s052",
+      "step_name": "SCREEN_OXIDE_STRIP",
+      "risk_score": 0.12,
+      "confidence_lo": 0.04,
+      "confidence_hi": 0.2,
+      "shap": []
+    },
+    {
+      "step_id": "s053",
+      "step_name": "HIGH_K_DEPOSITION",
+      "risk_score": 0.36,
+      "confidence_lo": 0.28,
+      "confidence_hi": 0.44,
+      "shap": []
+    },
+    {
+      "step_id": "s054",
+      "step_name": "METAL_GATE_DEPOSITION",
+      "risk_score": 0.83,
+      "confidence_lo": 0.75,
+      "confidence_hi": 0.91,
+      "shap": [
+        {
+          "feature": "wn_thickness_nm",
+          "value": 5.0,
+          "contribution": 0.44
+        },
+        {
+          "feature": "pvd_power_W",
+          "value": 6000.0,
+          "contribution": 0.28
+        },
+        {
+          "feature": "substrate_temp_c",
+          "value": 300.0,
+          "contribution": 0.14
+        }
+      ]
+    },
+    {
+      "step_id": "s055",
+      "step_name": "GATE_PATTERNING",
+      "risk_score": 0.25,
+      "confidence_lo": 0.17,
+      "confidence_hi": 0.33,
+      "shap": []
+    },
+    {
+      "step_id": "s056",
+      "step_name": "LIGHTLY_DOPED_DRAIN",
+      "risk_score": 0.18,
+      "confidence_lo": 0.1,
+      "confidence_hi": 0.26,
+      "shap": []
+    },
+    {
+      "step_id": "s057",
+      "step_name": "HALO_IMPLANT",
+      "risk_score": 0.14,
+      "confidence_lo": 0.06,
+      "confidence_hi": 0.22,
+      "shap": []
+    },
+    {
+      "step_id": "s058",
+      "step_name": "NITRIDE_SPACER_CVD",
+      "risk_score": 0.1,
+      "confidence_lo": 0.02,
+      "confidence_hi": 0.18,
+      "shap": []
+    },
+    {
+      "step_id": "s059",
+      "step_name": "SPACER_ETCH",
+      "risk_score": 0.23,
+      "confidence_lo": 0.15,
+      "confidence_hi": 0.31,
+      "shap": []
+    },
+    {
+      "step_id": "s060",
+      "step_name": "DEEP_SOURCE_DRAIN_IMPLANT",
+      "risk_score": 0.77,
+      "confidence_lo": 0.69,
+      "confidence_hi": 0.85,
+      "shap": [
+        {
+          "feature": "dose_ions_cm2",
+          "value": 3500000000000000.0,
+          "contribution": 0.43
+        },
+        {
+          "feature": "energy_keV",
+          "value": 40.0,
+          "contribution": 0.26
+        },
+        {
+          "feature": "angle_deg",
+          "value": 0.0,
+          "contribution": 0.09
+        }
+      ]
+    },
+    {
+      "step_id": "s061",
+      "step_name": "ACTIVATION_ANNEAL",
+      "risk_score": 0.31,
+      "confidence_lo": 0.23,
+      "confidence_hi": 0.39,
+      "shap": []
+    },
+    {
+      "step_id": "s062",
+      "step_name": "SALICIDE_BLOCK_LITHO",
+      "risk_score": 0.16,
+      "confidence_lo": 0.08,
+      "confidence_hi": 0.24,
+      "shap": []
+    },
+    {
+      "step_id": "s063",
+      "step_name": "COBALT_DEPOSITION",
+      "risk_score": 0.66,
+      "confidence_lo": 0.58,
+      "confidence_hi": 0.74,
+      "shap": []
+    },
+    {
+      "step_id": "s064",
+      "step_name": "RAPID_THERMAL_SILICIDE",
+      "risk_score": 0.2,
+      "confidence_lo": 0.12,
+      "confidence_hi": 0.28,
+      "shap": []
+    },
+    {
+      "step_id": "s065",
+      "step_name": "SELECTIVE_COBALT_ETCH",
+      "risk_score": 0.15,
+      "confidence_lo": 0.07,
+      "confidence_hi": 0.23,
+      "shap": []
+    },
+    {
+      "step_id": "s066",
+      "step_name": "SECOND_SILICIDE_ANNEAL",
+      "risk_score": 0.27,
+      "confidence_lo": 0.19,
+      "confidence_hi": 0.35,
+      "shap": []
+    },
+    {
+      "step_id": "s067",
+      "step_name": "CONTACT_ETCH_STOP_LAYER",
+      "risk_score": 0.08,
+      "confidence_lo": 0.0,
+      "confidence_hi": 0.16,
+      "shap": []
+    },
+    {
+      "step_id": "s068",
+      "step_name": "ILD0_DEPOSITION",
+      "risk_score": 0.19,
+      "confidence_lo": 0.11,
+      "confidence_hi": 0.27,
+      "shap": []
+    },
+    {
+      "step_id": "s069",
+      "step_name": "ILD0_CMP",
+      "risk_score": 0.75,
+      "confidence_lo": 0.67,
+      "confidence_hi": 0.83,
+      "shap": [
+        {
+          "feature": "pressure_psi",
+          "value": 3.7,
+          "contribution": 0.37
+        },
+        {
+          "feature": "removal_rate_nm_min",
+          "value": 130.0,
+          "contribution": 0.23
+        },
+        {
+          "feature": "within_wafer_uniformity",
+          "value": 3.8,
+          "contribution": 0.16
+        }
+      ]
+    },
+    {
+      "step_id": "s070",
+      "step_name": "CONTACT_LITHO",
+      "risk_score": 0.32,
+      "confidence_lo": 0.24,
+      "confidence_hi": 0.4,
+      "shap": []
+    },
+    {
+      "step_id": "s071",
+      "step_name": "CONTACT_ETCH",
+      "risk_score": 0.13,
+      "confidence_lo": 0.05,
+      "confidence_hi": 0.21,
+      "shap": []
+    },
+    {
+      "step_id": "s072",
+      "step_name": "CONTACT_CLEAN",
+      "risk_score": 0.07,
+      "confidence_lo": 0.0,
+      "confidence_hi": 0.15,
+      "shap": []
+    },
+    {
+      "step_id": "s073",
+      "step_name": "TI_LINER_DEPOSITION",
+      "risk_score": 0.11,
+      "confidence_lo": 0.03,
+      "confidence_hi": 0.19,
+      "shap": []
+    },
+    {
+      "step_id": "s074",
+      "step_name": "TIN_BARRIER_DEPOSITION",
+      "risk_score": 0.24,
+      "confidence_lo": 0.16,
+      "confidence_hi": 0.32,
+      "shap": []
+    },
+    {
+      "step_id": "s075",
+      "step_name": "TUNGSTEN_CVD",
+      "risk_score": 0.68,
+      "confidence_lo": 0.6,
+      "confidence_hi": 0.76,
+      "shap": []
+    },
+    {
+      "step_id": "s076",
+      "step_name": "TUNGSTEN_ETCHBACK",
+      "risk_score": 0.17,
+      "confidence_lo": 0.09,
+      "confidence_hi": 0.25,
+      "shap": []
+    },
+    {
+      "step_id": "s077",
+      "step_name": "IMD1_DEPOSITION",
+      "risk_score": 0.09,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.17,
+      "shap": []
+    },
+    {
+      "step_id": "s078",
+      "step_name": "IMD1_CMP",
+      "risk_score": 0.21,
+      "confidence_lo": 0.13,
+      "confidence_hi": 0.29,
+      "shap": []
+    },
+    {
+      "step_id": "s079",
+      "step_name": "DUAL_DAMASCENE_LITHO",
+      "risk_score": 0.86,
+      "confidence_lo": 0.78,
+      "confidence_hi": 0.94,
+      "shap": [
+        {
+          "feature": "trench_cd_nm",
+          "value": 70.0,
+          "contribution": 0.45
+        },
+        {
+          "feature": "via_cd_nm",
+          "value": 50.0,
+          "contribution": 0.3
+        },
+        {
+          "feature": "overlay_nm",
+          "value": 5.2,
+          "contribution": 0.17
+        }
+      ]
+    },
+    {
+      "step_id": "s080",
+      "step_name": "DUAL_DAMASCENE_ETCH",
+      "risk_score": 0.26,
+      "confidence_lo": 0.18,
+      "confidence_hi": 0.34,
+      "shap": []
+    },
+    {
+      "step_id": "s081",
+      "step_name": "DIELECTRIC_BARRIER",
+      "risk_score": 0.14,
+      "confidence_lo": 0.06,
+      "confidence_hi": 0.22,
+      "shap": []
+    },
+    {
+      "step_id": "s082",
+      "step_name": "CU_PVD_SEED",
+      "risk_score": 0.23,
+      "confidence_lo": 0.15,
+      "confidence_hi": 0.31,
+      "shap": []
+    },
+    {
+      "step_id": "s083",
+      "step_name": "CU_ECP_FILL",
+      "risk_score": 0.35,
+      "confidence_lo": 0.27,
+      "confidence_hi": 0.43,
+      "shap": []
+    },
+    {
+      "step_id": "s084",
+      "step_name": "CU_ANNEAL",
+      "risk_score": 0.12,
+      "confidence_lo": 0.04,
+      "confidence_hi": 0.2,
+      "shap": []
+    },
+    {
+      "step_id": "s085",
+      "step_name": "CU_CMP_FINAL",
+      "risk_score": 0.65,
+      "confidence_lo": 0.57,
+      "confidence_hi": 0.73,
+      "shap": []
+    },
+    {
+      "step_id": "s086",
+      "step_name": "CAP_DIELECTRIC",
+      "risk_score": 0.18,
+      "confidence_lo": 0.1,
+      "confidence_hi": 0.26,
+      "shap": []
+    },
+    {
+      "step_id": "s087",
+      "step_name": "IMD2_DEPOSITION",
+      "risk_score": 0.1,
+      "confidence_lo": 0.02,
+      "confidence_hi": 0.18,
+      "shap": []
+    },
+    {
+      "step_id": "s088",
+      "step_name": "IMD2_CMP",
+      "risk_score": 0.29,
+      "confidence_lo": 0.21,
+      "confidence_hi": 0.37,
+      "shap": []
+    },
+    {
+      "step_id": "s089",
+      "step_name": "METAL_HARD_MASK",
+      "risk_score": 0.15,
+      "confidence_lo": 0.07,
+      "confidence_hi": 0.23,
+      "shap": []
+    },
+    {
+      "step_id": "s090",
+      "step_name": "LOW_K_DIELECTRIC_CVD",
+      "risk_score": 0.22,
+      "confidence_lo": 0.14,
+      "confidence_hi": 0.3,
+      "shap": []
+    },
+    {
+      "step_id": "s091",
+      "step_name": "UV_CURE_LOW_K",
+      "risk_score": 0.08,
+      "confidence_lo": 0.0,
+      "confidence_hi": 0.16,
+      "shap": []
+    },
+    {
+      "step_id": "s092",
+      "step_name": "FINAL_LITHO_VIA",
+      "risk_score": 0.74,
+      "confidence_lo": 0.66,
+      "confidence_hi": 0.82,
+      "shap": [
+        {
+          "feature": "focus_offset_nm",
+          "value": 10.5,
+          "contribution": 0.35
+        },
+        {
+          "feature": "cd_nm",
+          "value": 48.0,
+          "contribution": 0.26
+        },
+        {
+          "feature": "overlay_nm",
+          "value": 4.8,
+          "contribution": 0.15
+        }
+      ]
+    },
+    {
+      "step_id": "s093",
+      "step_name": "FINAL_VIA_ETCH",
+      "risk_score": 0.27,
+      "confidence_lo": 0.19,
+      "confidence_hi": 0.35,
+      "shap": []
+    },
+    {
+      "step_id": "s094",
+      "step_name": "TOP_METAL_DEPOSITION",
+      "risk_score": 0.16,
+      "confidence_lo": 0.08,
+      "confidence_hi": 0.24,
+      "shap": []
+    },
+    {
+      "step_id": "s095",
+      "step_name": "TOP_METAL_LITHO",
+      "risk_score": 0.13,
+      "confidence_lo": 0.05,
+      "confidence_hi": 0.21,
+      "shap": []
+    },
+    {
+      "step_id": "s096",
+      "step_name": "TOP_METAL_ETCH",
+      "risk_score": 0.2,
+      "confidence_lo": 0.12,
+      "confidence_hi": 0.28,
+      "shap": []
+    },
+    {
+      "step_id": "s097",
+      "step_name": "OXIDE_PASSIVATION",
+      "risk_score": 0.11,
+      "confidence_lo": 0.03,
+      "confidence_hi": 0.19,
+      "shap": []
+    },
+    {
+      "step_id": "s098",
+      "step_name": "NITRIDE_PASSIVATION",
+      "risk_score": 0.09,
+      "confidence_lo": 0.01,
+      "confidence_hi": 0.17,
+      "shap": []
+    },
+    {
+      "step_id": "s099",
+      "step_name": "BOND_PAD_OPEN",
+      "risk_score": 0.14,
+      "confidence_lo": 0.06,
+      "confidence_hi": 0.22,
+      "shap": []
+    }
+  ],
+  "anomalies": [
+    {
+      "step_id": "s010",
+      "anomaly_score": 0.88,
+      "type": "pressure_spike"
+    },
+    {
+      "step_id": "s054",
+      "anomaly_score": 0.83,
+      "type": "deposition_rate_deviation"
+    },
+    {
+      "step_id": "s079",
+      "anomaly_score": 0.86,
+      "type": "overlay_exceedance"
+    }
+  ]
+}
