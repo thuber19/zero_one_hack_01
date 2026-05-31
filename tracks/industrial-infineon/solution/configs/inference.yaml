@@ -1,0 +1,10 @@
+run_name: inference
+seed: 42
+precision: bf16
+artifacts: ../submissions
+decoder_ckpt: ../models/decoder
+encoder_ckpt: ../models/encoder
+decoder:
+  size: base
+  max_len: 256
+  constrained_decode: true

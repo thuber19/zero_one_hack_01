@@ -1,53 +1,116 @@
-# Industrial AI (Infineon) — Team TBD submission
+# Industrial AI (Infineon) — Learning and Benchmarking Process Logic
 
-> **Can a model learn the hidden *logic* of semiconductor manufacturing — the order
-> constraints that make a process route valid — instead of just memorizing sequences?**
-
-Our answer is **procseq**: two from-scratch neural models that learn the grammar of
-fab routes, wrapped in a deterministic **physics verification layer**
-(*"the model proposes, physics disposes"*). A Llama-style **decoder** does next-step
-prediction & completion; a DeBERTa-style **encoder** does anomaly detection; a rule
-engine guarantees every emitted route is physically valid.
-
-📄 **The full write-up + results is in the root [`REPORT.md`](../../REPORT.md).**
-
----
-
-## Where everything is
-
-| Path | What |
-|---|---|
-| **[`solution/`](solution/)** | **The submission** — procseq (models, training, inference, hybrid, dashboard, tests) |
-| `solution/README.md` | Setup + how to run / reproduce |
-| `solution/artifacts/` | Deliverables: `nextstep.csv`, `completion.csv`, `anomaly.csv`, `metrics.json`, training logs |
-| `solution/pitch/ProcSeq_Pitch.pdf` | Pitch slides |
-| `physics/`, `refinery.py`, `fix.py`, `pseudo_family.py` | The **verification companion** procseq imports (rule engine + physics-vetoed decode) |
-| `data/` | Organizer data: family variants, eval inputs, `generate_sequences.py`, `generation_rules.md` (the 10 rules) |
-
-## Run it
+## Quick Start (Reproduce Submissions)
 
 ```bash
-pip install -r ../../requirements.txt
+# 1. Clone
+git clone https://github.com/thuber19/zero_one_hack_01.git
+cd zero_one_hack_01/tracks/industrial-infineon
+
+# 2. Install dependencies (pick one)
+pip install -r ../../requirements.txt          # option A: pip
+# OR
+pixi install                                   # option B: pixi (used on Leonardo)
+
+# 3. Download model weights (~110MB from Dropbox)
+bash download_models.sh
+
+# 4. Run inference on the official eval files
 cd solution
-make smoke                                              # CPU, ~30s sanity check → "SMOKE OK"
-python -m procseq.run_all --config configs/leonardo_decoder.yaml   # full pipeline (GPU)
-python -m procseq.run_all --config configs/leonardo_decoder.yaml --skip-train  # inference-only
+PYTHONPATH=$PWD python3 -m procseq.infer --task 1 --real --config configs/inference.yaml
+PYTHONPATH=$PWD python3 -m procseq.infer --task 2 --real --config configs/inference.yaml
+PYTHONPATH=$PWD python3 -m procseq.infer --task 3 --real --config configs/inference.yaml
 ```
 
-## Results (held-out self-eval — see `REPORT.md` for the honest breakdown)
+Output in `submissions/`:
+- `submission_task1_real.csv` (nextstep)
+- `submission_task2_real.csv` (completion)
+- `submission_task3_real.csv` (anomaly)
 
-| Task | Headline |
-|---|---|
-| 1 · Next-step | **Top-1 0.772 · Top-5 1.000 · MRR 0.88**, next-operation accuracy **0.963** |
-| 2 · Completion | **Block-level 0.92**, completions **100% rule-valid** |
-| 3 · Anomaly | physics hybrid (rule verdict + learned score); learned encoder alone AUC 0.61 (honest) |
+The eval input files are at `data/eval_input_valid.csv` and `data/eval_input_anomaly.csv`.
+To run on different eval files, replace those files and rerun the commands above (without `--real`).
 
-## The three tasks (+ hidden 4th family)
+## Model Weights
 
-1. **Next-step prediction** — predict the next step of a partial route (Top-5).
-2. **Sequence completion** — finish a partial route (must stay rule-valid).
-3. **Anomaly detection** — flag routes that break the 10 process-logic rules, attribute the rule.
-4. **OOD** *(post-submission)* — generalization to an unseen 4th product family.
+Weights are hosted on Dropbox (too large for GitHub):
+```bash
+bash download_models.sh
+```
+This downloads decoder (~105MB) and encoder (~25MB) into `models/`.
 
-The 10 forbidden patterns and the process grammar are documented in
-[`data/generation_rules.md`](data/generation_rules.md).
+## Architecture
+
+Two from-scratch neural models wrapped in a physics verification layer:
+
+- **Decoder** (Llama-style, 27M params): Next-step prediction (Task 1) + sequence completion (Task 2) with grammar-constrained decoding
+- **Encoder** (DeBERTa-style): Anomaly detection (Task 3) with contrastive learning
+- **Physics refinery**: Rule engine that guarantees every emitted route is physically valid ("model proposes, physics disposes")
+
+## Results (self-eval on held-out data)
+
+| Task | Metric | Score |
+|---|---|---|
+| **1. Next-step** | Top-1 Accuracy | **81.3%** |
+| | Top-3 Accuracy | 99.7% |
+| | Top-5 Accuracy | 100% |
+| | MRR | 0.904 |
+| **2. Completion** | Exact Match | 18.7% |
+| | Token Accuracy | 62.6% |
+| | Block-level Accuracy | 92.6% |
+| | Logic Validity | 100% |
+| **3. Anomaly** | Binary Accuracy | 63.4% |
+| | Precision | 55.9% |
+| | ROC-AUC | 0.625 |
+
+## Training on Leonardo
+
+```bash
+# Install pixi (one time)
+curl -fsSL https://pixi.sh/install.sh | bash
+
+# Setup environment
+cd tracks/industrial-infineon
+pixi install
+
+# Launch training (interactive menu)
+bash jobs/run.sh
+# Option 3: Train procseq (decoder + encoder, all 3 tasks)
+# Recommended: base model, 20000 sequences/family, 16000-20000 steps, batch 64
+```
+
+Training takes ~30 min on a single A100 GPU. Produces submission files automatically.
+
+## Project Structure
+
+```
+tracks/industrial-infineon/
+  data/                    # Training data, eval files, official scorer
+    eval_input_valid.csv   # Official eval input (Tasks 1+2)
+    eval_input_anomaly.csv # Official eval input (Task 3)
+    eval_metrics.py        # Official scoring script
+    generate_sequences.py  # Sequence generator (process grammar)
+    generation_rules.md    # Grammar documentation + 10 forbidden rules
+  solution/                # Procseq pipeline (decoder + encoder)
+    procseq/               # Model code, training, inference
+    configs/               # Training/inference configs
+  src/                     # LSTM/Transformer pipeline (alternative approach)
+  physics/                 # Physics rule engine
+  refinery.py              # Physics-constrained decoding
+  models/                  # Model checkpoints (download with download_models.sh)
+  submissions/             # Final submission CSV files
+  jobs/run.sh              # Leonardo job launcher
+```
+
+## Submission Files
+
+In `submissions/`:
+- `nextstep.csv` — Task 1: EXAMPLE_ID, RANK_1..5
+- `completion.csv` — Task 2: EXAMPLE_ID, PREDICTED_SEQUENCE
+- `anomaly.csv` — Task 3: EXAMPLE_ID, IS_VALID, SCORE, PREDICTED_RULE
+
+## Credits
+
+- **Infrastructure**: Leonardo supercomputer (CINECA), NVIDIA A100 GPUs
+- **Libraries**: PyTorch, HuggingFace Transformers, scikit-learn
+- **Team**: Tobias Huber, Mina Mikail, Khaled El Yamany, Fathy Shalaby
+- **AI Tools**: Claude Code (Anthropic)
